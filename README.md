@@ -1,158 +1,108 @@
 # 📸 Smart Attendance System (AI-Powered Face Recognition)
 
-An end-to-end AI Attendance System built with FastAPI, Streamlit, InsightFace, Supabase, and deployed on Railway.
-This system performs real-time face recognition using stored student images, automatically marks attendance, and provides a simple user interface for teachers and admins.
+An end-to-end AI attendance system built with **FastAPI**, **Supabase**, and a **static admin dashboard**, deployed on **DigitalOcean App Platform**.
+Face recognition runs on the mobile client; the backend stores student data, images, attendance records, and admin APIs.
 
 ## 🚀 Features
-## 🧠 AI Face Recognition (InsightFace)
 
-- Uses InsightFace ArcFace embeddings, one of the most accurate face recognition models available.
+### 🧠 AI Face Recognition
 
-- High-precision embedding generation and matching using cosine similarity.
+- Mobile app uses face recognition against student photos in Supabase.
+- Embeddings are generated on demand (not stored in the DB).
 
-- Embeddings are generated on demand (not stored in DB).
+### ☁️ Cloud Storage (Supabase)
 
-## ☁️ Cloud Storage (Supabase)
+- Student profiles, institutions, and face images.
+- Attendance records and audit logs.
 
-- Stores all student information and face images.
+### ⚡ Backend (FastAPI)
 
-- Backend fetches images from Supabase when needed.
+- REST API for uploads, attendance, student management, billing, and enterprise `/v1` access.
+- Rate limiting, security headers, and Sentry integration.
 
-- Streamlined integration for reading/writing attendance records.
+### 🌐 Admin dashboard (static)
 
-## ⚡ High-Performance Backend (FastAPI)
+Served by FastAPI at `/dashboard` (`static/dashboard.html` + `dashboard.js`):
 
-- Fast, scalable API for:
+- Institution and student management
+- Attendance records and summaries
+- Audit logs and admin auth flows
 
-- image uploads
-
-- embedding generation
-
-- face matching
-
-- attendance marking
-
-- student management
-
-## 🌐 Modern Frontend (Streamlit)
-
-Clean UI for:
-
-- capturing live webcam images
-
-- displaying recognition results
-
-- viewing attendance logs
-
-- managing students
+Marketing and auth pages live under `static/` (login, password reset, privacy, terms).
 
 ## 📦 Deployment
-- Backend (FastAPI)
 
-- Deployed on Railway using:
+Production runs a single process:
 
-```python
+```bash
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-## Frontend (Streamlit)
-1. Deployable via:
-   - Streamlit Cloud
-   - Railway
-   - Docker image
+### DigitalOcean App Platform
+
+1. Create an app from this repo (Dockerfile deploy).
+2. Set environment variables from `.env.example` in the DO dashboard.
+3. Health check path: `/health` (see `.do/app.yaml` for a reference spec).
+
+The container runs:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+See `Dockerfile`. `Procfile` is optional for other hosts.
 
 ## 🏗️ System Architecture
-```python
 
-             ┌────────────────────────┐
-             │        Streamlit       │
-             │  (User Interface/App)  │
-             └───────────┬────────────┘
-                         │
-                         ▼
-          ┌────────────────────────────┐
-          │          FASTAPI           │
-          │     (Backend on Railway)   │
-          └───────────┬────────────────┘
-                      │
-     ┌────────────────┼──────────────────┐
-     │                │                  │
-     ▼                ▼                  ▼
-┌───────────┐   ┌────────────┐   ┌─────────────────┐
-│ InsightFace│   │ Attendance │   │ Supabase Storage │
-│ Embeddings │   │   Logging  │   │  (Images + Data) │
-└───────────┘   └────────────┘   └─────────────────┘
+```
+┌────────────────────────┐     ┌────────────────────────┐
+│   Mobile app (APK)     │     │  Admin dashboard       │
+│   Face recognition     │     │  /dashboard (static)   │
+└───────────┬────────────┘     └───────────┬────────────┘
+            │                              │
+            └──────────────┬───────────────┘
+                           ▼
+            ┌──────────────────────────────┐
+            │         FastAPI              │
+            │  (DigitalOcean / Docker)     │
+            └──────────────┬───────────────┘
+                           ▼
+            ┌──────────────────────────────┐
+            │  Supabase (DB + Storage)     │
+            └──────────────────────────────┘
 ```
 
 ## ⚙️ How It Works
-   1. Students upload images to Supabase
-      Images stored in a bucket
-      Student metadata saved in Supabase DB
 
-   2. Backend fetches images
-
-      When attendance is triggered, the backend:
-      fetches all student images
-      generates embeddings dynamically
-      caches them in memory during container runtime
-
-   3. Live camera captures a frame
-      Streamlit sends the image to FastAPI.
-
-   4. InsightFace generates embeddings
-      Both embeddings (student image + live image) are compared using cosine similarity.
-
-   5. Attendance marked on match
-      If similarity passes threshold, attendance is marked and saved in Supabase.
-
-## 🔍 Matching Logic
-- Embedding Generation
-- InsightFace model → embedding vector (512-D)
-- Similarity
-
-### Cosine Similarity
-
-The system uses **cosine similarity** to compare face embeddings generated by InsightFace:
-
-```python
-similarity = np.dot(vec1, vec2)
-```
+1. **Students** — Photos and metadata are stored in Supabase (storage bucket + tables).
+2. **Attendance** — The mobile app captures a face, matches against enrolled students, and calls the API to record attendance.
+3. **Admins** — Sign in via Supabase Auth; the dashboard calls protected `/admin/*` and related routes on the same origin.
 
 ## 🧪 Testing
 
-- You can test recognition by:
+```bash
+pytest tests/
+```
 
-- Uploading student images to Supabase
-
-- Running Streamlit
-
-- Taking a live picture
-
-- Watching the backend detect and mark attendance
+Security-focused regressions live in `tests/test_security_regressions.py` and `tests/test_log_login.py`.
 
 ## 🧑‍💻 Tech Stack
 
-| Area                | Technology                          |
-|:-------------------:|:-----------------------------------|
-| Backend             | FastAPI, Python                     |
-| AI/Face Recognition | InsightFace (ArcFace), ONNX Runtime |
-| Database            | Supabase (PostgreSQL + Storage)     |
-| Frontend            | Streamlit                           |
-| Deployment          | Railway                             |
-| Auth & Management   | Supabase                            |
-| Image Processing    | OpenCV, PIL                         |
-
+| Area        | Technology                          |
+|:-----------:|:------------------------------------|
+| Backend     | FastAPI, Python                     |
+| Database    | Supabase (PostgreSQL + Storage)     |
+| Admin UI    | Static HTML/JS (`static/`)          |
+| Mobile      | Android (APK release via API)       |
+| Deployment  | DigitalOcean App Platform, Docker   |
+| Auth        | Supabase Auth                       |
 
 ## 🌍 Use Cases
 
 - School attendance
-
 - Employee check-in systems
-
 - Exam hall verification
-
 - Hostel / dormitory entry
-
 - Visitor verification systems
 
 ## 📞 Contact / Hire Me
@@ -166,4 +116,5 @@ Freelancer | AI/ML Developer
 - Email: ainebyonabubaker@proton.me
 
 ## 📄 License
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

@@ -528,7 +528,15 @@ footer {
 </footer>
 
 <script>
-const API_URL = "https://faceattend.app";
+function faceattendApiBase() {
+  if (typeof location === "undefined") return "https://faceattend.app";
+  const host = location.hostname;
+  if (host === "faceattend.app" || host.endsWith(".faceattend.app")) {
+    return `${location.protocol}//${location.host}`;
+  }
+  return "https://faceattend.app";
+}
+const API_URL = faceattendApiBase();
 
 // ── Load pricing plans dynamically from DB ──
 async function loadPlans() {

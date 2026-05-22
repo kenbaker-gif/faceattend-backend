@@ -11,11 +11,27 @@ if (typeof supabase === 'undefined') {
 
 const SUPABASE_URL      = "https://xrlsltunfgjxooyyrora.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhybHNsdHVuZmdqeG9veXlyb3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNDczODEsImV4cCI6MjA4MDYyMzM4MX0.BWr27wHWGt6a3gWnD2ocGdQBL0_sH0HK-YHUcJsrlC0";
-const API_URL           = "https://faceattend.app";
-const DAZZLING_URL      = "https://faceattend.app";
+function faceattendApiBase() {
+  if (typeof location === "undefined") return "https://faceattend.app";
+  const host = location.hostname;
+  if (host === "faceattend.app" || host.endsWith(".faceattend.app")) {
+    return `${location.protocol}//${location.host}`;
+  }
+  return "https://faceattend.app";
+}
+const API_URL = faceattendApiBase();
+const DAZZLING_URL = API_URL;
 
 const { createClient } = supabase;
 const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── Sign out helper ────────────────────────────────────────────────────────
+async function signOutAndClear() {
+  await client.auth.signOut(); // ← was calling itself
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('sb-')) localStorage.removeItem(key);
+  });
+}
 
 let currentToken         = null;
 let aiSummaryData        = null;
@@ -312,6 +328,9 @@ async function login() {
   if (!profile || !(isAdmin || isSuperAdminCheck)) {
     showLoginError("Access denied. Admin account required.");
     await client.auth.signOut();
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) localStorage.removeItem(key);
+    });
     btn.disabled    = false;
     btn.textContent = 'Sign In';
     return;
@@ -335,20 +354,7 @@ function showLoginError(msg) {
 async function initDashboard(session, isFreshLogin = false) {
   currentToken = session.access_token;
 
-// 1. Fire non-blocking analytics asynchronously
-  if (isFreshLogin) {
-    fetch(`${DAZZLING_URL}/auth/log-login`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ source: 'dashboard'}),
-    }).catch(e => console.warn('log-login failed:', e));
-  }
-
   try {
-    // 2. Resolve critical profile architecture early
     const { data: profile, error } = await client
       .from('profiles')
       .select('institution_id, is_super_admin, role')
@@ -360,7 +366,26 @@ async function initDashboard(session, isFreshLogin = false) {
     currentInstitutionId = profile?.institution_id || null;
     isSuperAdmin         = profile?.is_super_admin === true;
 
-    // 3. Clear existing dynamic items before building UI
+    if (isFreshLogin) {
+      try {
+        const logResp = await fetch(`${DAZZLING_URL}/auth/log-login`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ source: 'dashboard' }),
+        });
+        if (!logResp.ok) {
+          const errBody = await logResp.json().catch(() => ({}));
+          console.warn('log-login failed:', logResp.status, errBody.detail || errBody.message || logResp.statusText);
+        }
+      } catch (e) {
+        console.warn('log-login failed:', e);
+      }
+    }
+
+    // Clear existing dynamic items before building UI
     const tabs = document.getElementById('tabs');
     tabs.innerHTML = ''; 
 
@@ -457,7 +482,7 @@ async function initDashboard(session, isFreshLogin = false) {
 }
 
 // ── AI SUMMARY TAB ─────────────────────────────────────────────────────────
-function populateAIScopeUnits() {
+async function populateAIScopeUnits() {
   const sel = document.getElementById('ai-scope-id');
   const scopeSel = document.getElementById('ai-scope');
   if (scopeSel && !currentInstitutionId && isSuperAdmin) {
@@ -637,7 +662,8 @@ async function logout() {
     } catch (e) { console.warn('log-logout failed:', e); }
   }
 
-  await client.auth.signOut();
+  await signOutAndClear();
+
   localStorage.removeItem('lastActivity');
   currentToken         = null;
   currentInstitutionId = null;
@@ -648,7 +674,7 @@ async function logout() {
   coordinatorsData     = [];
   auditLoaded          = false;
 
-  ['tab-btn-attendance','tab-btn-students','tab-btn-team','tab-btn-units',
+  ['tab-btn-attendance','tab-btn-students','tab-btn-aisummary','tab-btn-team','tab-btn-units',
    'tab-btn-billing','tab-btn-apikeys','tab-btn-superadmin',
    'tab-btn-security','tab-btn-audit'].forEach(id => {
     document.getElementById(id)?.remove();
@@ -1810,7 +1836,7 @@ initDashboard = async function(session, isFreshLogin = false) {
       return;
     }
   }
-  await _origInitDashboard(session);
+  await _origInitDashboard(session, isFreshLogin);
   resetIdleTimer();
 };
 

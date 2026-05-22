@@ -88,7 +88,7 @@ async def log_event(
     Never raises — errors are logged but swallowed so they don't break routes.
     """
     ip = ip_address or _get_ip(request)
-    meta = metadata or {}
+    meta = {k: v for k, v in (metadata or {}).items() if v is not None}
 
     try:
         supabase_admin.table("audit_logs").insert({

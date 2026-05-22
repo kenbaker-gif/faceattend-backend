@@ -5,7 +5,6 @@ data/raw_faces/
 *.jpeg
 debug
 debug2
-streamlit/
 *.test.py
 .env
 logs
@@ -20,3 +19,5 @@ app/Enterprise
 .cursorignore
 
 venv
+
+tests
