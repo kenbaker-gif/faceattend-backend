@@ -528,7 +528,12 @@ async function generateAISummary() {
     renderAISummary(data);
     if (preview) preview.classList.add('visible');
     preview?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    showToast('✓ Summary generated', 'success');
+    showToast(
+      data.truncated
+        ? '✓ Summary generated (latest 1000 records only)'
+        : '✓ Summary generated',
+      'success'
+    );
   } catch (e) {
     showToast(`Error: ${e.message}`, 'error');
   } finally {
@@ -539,7 +544,9 @@ async function generateAISummary() {
 function renderAISummary(data) {
   const stats = data.stats || {};
   const metaParts = [data.institution];
-  if (data.scope === 'course_unit' && data.scope_id) metaParts.push(`Course Unit: ${data.scope_id}`);
+  if (data.scope === 'course_unit' && (data.course_unit_name || data.scope_id)) {
+    metaParts.push(`Course Unit: ${data.course_unit_name || data.scope_id}`);
+  }
   if (data.date_from || data.date_to) metaParts.push(`${data.date_from || '...'} → ${data.date_to || 'today'}`);
   metaParts.push(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
   document.getElementById('ai-preview-meta').textContent = metaParts.join(' · ');
