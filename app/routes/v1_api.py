@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
 
-from .dep import limiter, supabase, supabase_admin, check_admin, _bool_flag, require_enterprise
+from app.dep import limiter, supabase, supabase_admin, check_admin, _bool_flag, require_enterprise
 
 # ── Router ───────────────────────────────────────────────────────────────────
 

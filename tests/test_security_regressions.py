@@ -19,6 +19,7 @@ class SecurityRegressionTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         cls.main = importlib.import_module("app.main")
+        cls.admin_students = importlib.import_module("app.routes.admin_students")
         cls.audit_logs = importlib.import_module("app.routes.audit_logs")
         cls.email = importlib.import_module("app.utils.email")
 
@@ -86,8 +87,8 @@ class SecurityRegressionTests(unittest.IsolatedAsyncioTestCase):
                 return FakeTable(name, self)
 
         fake_admin = FakeSupabaseAdmin()
-        with patch.object(self.main, "supabase_admin", fake_admin):
-            result = await self.main.upload_student(
+        with patch.object(self.admin_students, "supabase_admin", fake_admin):
+            result = await self.admin_students.upload_student(
                 background_tasks=BackgroundTasks(),
                 student_id="S1",
                 name="Alice",
@@ -138,8 +139,8 @@ class SecurityRegressionTests(unittest.IsolatedAsyncioTestCase):
                 return FakeTable(name, self)
 
         fake_admin = FakeSupabaseAdmin()
-        with patch.object(self.main, "supabase_admin", fake_admin):
-            response = await self.main.list_students(
+        with patch.object(self.admin_students, "supabase_admin", fake_admin):
+            response = await self.admin_students.list_students(
                 institution_id="INST_B",
                 user=SimpleNamespace(id="user-1"),
             )
@@ -180,9 +181,9 @@ class SecurityRegressionTests(unittest.IsolatedAsyncioTestCase):
             def table(self, name):
                 return FakeTable(name)
 
-        with patch.object(self.main, "supabase_admin", FakeSupabaseAdmin()):
+        with patch.object(self.admin_students, "supabase_admin", FakeSupabaseAdmin()):
             with self.assertRaises(HTTPException) as ctx:
-                await self.main.delete_student("S1", user=SimpleNamespace(id="user-1"))
+                await self.admin_students.delete_student("S1", user=SimpleNamespace(id="user-1"))
 
         self.assertEqual(ctx.exception.status_code, 403)
 
@@ -247,9 +248,9 @@ class SecurityRegressionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn(("institution_id", "INST_X"), fake_admin.audit_query.filters)
 
-    def test_send_email_no_password_returns_without_name_error(self):
-        with patch.object(self.email, "SMTP_PASSWORD", ""), patch.object(self.email, "logger"):
-            self.email._send_email(["admin@example.com"], "subject", "<p>body</p>")
+    async def test_send_email_skips_gracefully_when_zoho_not_configured(self):
+        with patch.object(self.email, "ZOHO_ACCOUNT_ID", None), patch.object(self.email, "logger"):
+            await self.email._send_email(["admin@example.com"], "subject", "<p>body</p>")
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import hmac
 import hashlib
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from app.database import supabase
+from app.dep import supabase, supabase_admin
 
 router = APIRouter(prefix="/api/cart", tags=["payments"])
 
@@ -218,7 +218,6 @@ async def ipn_handler(request: Request):
     plan           = order["plan"]  # "standard" or "enterprise"
 
     # Step 4: Upgrade institution plan in Supabase
-    from .dep import supabase_admin
     try:
         supabase_admin.table("institutions").update({
             "plans": plan

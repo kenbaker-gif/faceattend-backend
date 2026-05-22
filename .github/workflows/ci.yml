@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main, admin-panel]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: test-anon-key
+      SUPABASE_ANON_KEY: test-anon-key
+      SERVICE_KEY: test-service-role-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: pytest tests/ -v

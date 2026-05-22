@@ -26,6 +26,53 @@ router = APIRouter()
 SUPABASE_WEBHOOK_SECRET = os.getenv("SUPABASE_WEBHOOK_SECRET", "")
 
 
+def _audit_metadata(row: dict) -> dict:
+    meta = row.get("metadata") or {}
+    if isinstance(meta, str):
+        try:
+            import json
+            meta = json.loads(meta)
+        except Exception:
+            meta = {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def _has_recent_login(
+    actor_id: str,
+    *,
+    source_filter: Optional[str] = None,
+) -> bool:
+    """
+    Return True if auth.login was logged in the last 60 seconds.
+    When source_filter is set (e.g. 'dashboard'), only matching sources count.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
+    try:
+        recent = (
+            supabase_admin.table("audit_logs")
+            .select("id, metadata")
+            .eq("actor_id", actor_id)
+            .eq("action", AuditAction.AUTH_LOGIN)
+            .gte("created_at", cutoff)
+            .limit(10)
+            .execute()
+        )
+        rows = recent.data or []
+        if not rows:
+            return False
+        if source_filter is None:
+            return True
+        return any(
+            _audit_metadata(row).get("source") == source_filter
+            for row in rows
+        )
+    except Exception as exc:
+        logger.error("[auth] Dedup check failed: %s", exc)
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -112,23 +159,15 @@ async def log_login(
         logger.error(f"[log-login] Profile lookup failed: {e}")
         institution_id = None
 
-    try:
-        from datetime import datetime, timedelta, timezone
-        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
-        recent = (
-            supabase.table("audit_logs")
-            .select("id")
-            .eq("actor_id", actor_id)
-            .eq("action", AuditAction.AUTH_LOGIN)
-            .gte("created_at", cutoff)
-            .limit(1)
-            .execute()
+    # Dashboard logins only dedupe against other dashboard logs (not webhook/Flutter).
+    dedup_source = "dashboard" if body.source == "dashboard" else None
+    if _has_recent_login(actor_id, source_filter=dedup_source):
+        logger.info(
+            "[log-login] Skipping duplicate for %s (source=%s)",
+            actor_id,
+            body.source,
         )
-        if recent.data:
-            logger.info("[log-login] Skipping duplicate for %s", actor_id)
-            return {"message": "already logged"}
-    except Exception as exc:
-        logger.error("[log-login] Dedup check failed: %s", exc)
+        return {"message": "already logged"}
 
     await log_event(
         AuditAction.AUTH_LOGIN,
@@ -222,8 +261,8 @@ async def supabase_auth_webhook(
 
     logger.info("[webhook] Auth event: %s for %s", event_type, user_email)
 
-    if event_type not in ("LOGIN", "SIGNUP", "TOKEN_REFRESHED"):
-        return {"ok": True}  # ignore other events
+    if event_type not in ("LOGIN", "SIGNUP"):
+        return {"ok": True}  # ignore TOKEN_REFRESHED and other events
 
     # Look up profile for institution_id
     try:
@@ -240,24 +279,9 @@ async def supabase_auth_webhook(
         logger.error("[webhook] Profile lookup failed: %s", exc)
         institution_id = None
 
-    # Deduplicate — same 60s window as Flutter fallback
-    try:
-        from datetime import datetime, timedelta, timezone
-        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
-        recent = (
-            supabase.table("audit_logs")
-            .select("id")
-            .eq("actor_id", user_id)
-            .eq("action", AuditAction.AUTH_LOGIN)
-            .gte("created_at", cutoff)
-            .limit(1)
-            .execute()
-        )
-        if recent.data:
-            logger.info("[webhook] Skipping duplicate login log for %s", user_id)
-            return {"ok": True}
-    except Exception as exc:
-        logger.error("[webhook] Webhook dedup check failed: %s", exc)
+    if _has_recent_login(user_id):
+        logger.info("[webhook] Skipping duplicate login log for %s", user_id)
+        return {"ok": True}
 
     await log_event(
         AuditAction.AUTH_LOGIN,
