@@ -64,53 +64,6 @@ async def get_attendance_records(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/admin/attendance_summary")
-async def get_summary(
-    institution_id: str = None,
-    user=Depends(check_admin),
-):
-    try:
-        profile_resp = supabase_admin.table("profiles") \
-            .select("institution_id, is_super_admin, role") \
-            .eq("id", user.id).single().execute()
-
-        is_super_admin = _bool_flag(profile_resp.data.get("is_super_admin") if profile_resp.data else None)
-        role           = profile_resp.data.get("role", "") if profile_resp.data else ""
-        user_institution_id = profile_resp.data.get("institution_id") if profile_resp.data else None
-
-        is_super = is_super_admin or role == "super_admin"
-
-        if not is_super and not user_institution_id:
-            raise HTTPException(status_code=403, detail="Institution admin requires institution_id in profile")
-
-        query = supabase_admin.table("attendance_records") \
-            .select("student_id, verified")
-
-        if is_super:
-            if institution_id:
-                query = query.eq("institution_id", institution_id)
-        else:
-            query = query.eq("institution_id", user_institution_id)
-
-        rows = query.execute().data or []
-        total_present = sum(1 for r in rows if r.get("verified") == "success")
-        total_absent  = sum(1 for r in rows if r.get("verified") == "failed")
-        by_student    = {}
-        for r in rows:
-            sid = r.get("student_id") or "Unknown"
-            if r.get("verified") == "success":
-                by_student[sid] = by_student.get(sid, 0) + 1
-        return {
-            "total_present": total_present,
-            "total_absent":  total_absent,
-            "by_student":    by_student,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/admin/ai-attendance-summary")
 async def ai_attendance_summary(
     scope: str = "institution",
