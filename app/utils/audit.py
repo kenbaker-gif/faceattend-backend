@@ -47,6 +47,7 @@ class AuditAction:
     # Attendance
     ATTENDANCE_VERIFY    = "attendance.verify"
     ATTENDANCE_SPOOF     = "attendance.spoof_detected"
+    AI_SUMMARY_GENERATED = "ai.summary_generated"
 
     # Course units
     COURSE_UNIT_CREATE   = "course_unit.create"
