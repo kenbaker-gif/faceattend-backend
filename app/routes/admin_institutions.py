@@ -1,6 +1,5 @@
 """
-Institution routes — public registration, admin list/status, plans, trial check.
-Refactor only; same paths and Supabase usage as before.
+Institution routes — public registration, admin list/status, trial check.
 """
 
 from __future__ import annotations
@@ -22,6 +21,8 @@ FREE_EMAIL_DOMAINS = {
     "live.com", "icloud.com", "aol.com", "protonmail.com",
     "zoho.com", "ymail.com", "mail.com", "googlemail.com",
 }
+
+PAID_PLANS = {"starter", "growth", "pro", "enterprise"}
 
 
 def generate_institution_id(name: str) -> str:
@@ -207,19 +208,6 @@ async def list_institutions(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/plans")
-def get_plans():
-    try:
-        resp = supabase_admin.table("plans") \
-            .select("*") \
-            .eq("is_active", True) \
-            .order("price_usd", desc=False, nullsfirst=False) \
-            .execute()
-        return {"plans": resp.data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/check-trial/{institution_id}")
 def check_trial(institution_id: str):
     try:
@@ -243,14 +231,19 @@ def check_trial(institution_id: str):
 
         if not is_active:
             return {"active": False, "reason": "Account suspended."}
-        if plans == "paid":
-            return {"active": True, "plans": "paid"}
+
+        # Paid plan — always active regardless of trial_ends_at
+        if plans in PAID_PLANS:
+            return {"active": True, "plans": plans}
+
+        # Trial plan — check expiry
         if trial_ends:
             ends_at = datetime.fromisoformat(trial_ends.replace("Z", "+00:00"))
             days_left = (ends_at - datetime.now(timezone.utc)).days
             if days_left <= 0:
                 return {"active": False, "reason": "Trial expired.", "days_left": 0}
             return {"active": True, "plans": "trial", "days_left": days_left}
+
         return {"active": True, "plans": plans}
     except HTTPException:
         raise

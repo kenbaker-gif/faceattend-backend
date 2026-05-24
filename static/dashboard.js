@@ -1380,65 +1380,143 @@ function populateInviteUnitDropdown() {
 
 // ── Load billing ───────────────────────────────────────────────────────────
 async function loadBilling() {
-  if (!currentToken || !currentInstitutionId) return;
   document.getElementById('billing-wrap').innerHTML =
     '<div class="loading"><div class="spinner"></div>Loading billing info...</div>';
   try {
-    const { data: inst, error } = await client.from('institutions')
-      .select('plans, status, trial_ends_at, name').eq('id', currentInstitutionId).limit(1).single();
-    if (error || !inst) {
-      document.getElementById('billing-wrap').innerHTML =
-        '<div class="loading" style="color:var(--red)">Failed to load billing info.</div>';
-      return;
-    }
-    const plan = (inst.plans || 'trial').toLowerCase();
-    const trialEnds = inst.trial_ends_at ? new Date(inst.trial_ends_at) : null;
-    const daysLeft = trialEnds ? Math.max(0, Math.ceil((trialEnds - Date.now()) / (1000 * 60 * 60 * 24))) : null;
-    const planLabel = plan === 'enterprise' ? 'Enterprise' : plan === 'standard' ? 'Standard' : plan === 'starter' ? 'Starter' : 'Trial';
-    const planColor = plan === 'enterprise' ? 'var(--purple)' : plan === 'standard' ? 'var(--cyan)' : 'var(--yellow)';
-    const expiryCard = trialEnds ? `
+    const resp = await fetch(`/check-trial/${institutionId}`);
+    const inst = await resp.json();
+    const plan     = inst.plans || 'trial';
+    const daysLeft = inst.days_left ?? null;
+
+    const planLabels = {
+      trial:      'Free Trial',
+      starter:    'Starter — $49/mo',
+      growth:     'Growth — $99/mo',
+      pro:        'Pro — $199/mo',
+      enterprise: 'Enterprise',
+    };
+
+    const trialBlock = plan === 'trial' ? `
       <div class="billing-card orange">
-        <div class="metric-label">Trial Expires</div>
-        <div class="metric-value" style="font-size:1.1rem;">${trialEnds.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}</div>
+        <div class="metric-label">Trial Status</div>
+        <div class="metric-value">${daysLeft !== null && daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left` : 'Expired'}</div>
         <div class="metric-sub" style="margin-top:8px;">${daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining` : 'Expired — upgrade to restore access'}</div>
       </div>` : '';
-    const upgradeBlock = (plan === 'trial' || plan === 'starter') ? `
-      <div class="upgrade-section">
-        <div class="upgrade-plan-tag">Standard Plan — $30 / month</div>
-        <div class="upgrade-title">Upgrade to Standard</div>
-        <div class="upgrade-desc">Get full access to all FaceAttend features — unlimited attendance records, coordinator invites, and priority support.</div>
-        <div class="upgrade-features">
-          <span class="upgrade-feature">Unlimited attendance records</span>
-          <span class="upgrade-feature">Up to 5 coordinators</span>
-          <span class="upgrade-feature">CSV export</span>
-          <span class="upgrade-feature">Priority support</span>
-        </div>
-        <div class="pesapal-row">
-          <button onclick="handleUpgrade('standard')" style="background:#00bcd4;color:#000;border:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;width:100%;">Pay Now — $30/month</button>
-          <span class="pesapal-note">Secure payment via Pesapal · MoMo, cards &amp; bank</span>
-        </div>
-      </div>` : plan === 'standard' ? `
-      <div class="enterprise-cta">
-        <p>You're on the Standard plan. Need custom integrations, a dedicated account manager, or direct API access? Upgrade to Enterprise.</p>
-        <button class="btn-contact-enterprise" onclick="window.open('mailto:abubaker@faceattend.app?subject=Enterprise Plan Inquiry','_blank')">Contact Us for Enterprise</button>
-      </div>` : `
-      <div class="enterprise-cta" style="border-color:rgba(167,139,250,0.3);">
-        <p style="color:var(--purple);">You're on the Enterprise plan. For billing inquiries or changes, contact us directly.</p>
-        <button class="btn-contact-enterprise" onclick="window.open('mailto:abubaker@faceattend.app?subject=Enterprise Billing','_blank')">Contact Support</button>
-      </div>`;
+
+    let upgradeBlock = '';
+
+    if (plan === 'trial' || plan === 'starter') {
+      upgradeBlock = `
+        <div class="upgrade-section">
+          <div class="upgrade-title">Upgrade Your Plan</div>
+          <div class="upgrade-desc">Choose a plan that fits your institution size. All plans include the full FaceAttend feature set.</div>
+          <div class="upgrade-plans-grid">
+            <div class="upgrade-plan-card${plan === 'starter' ? ' current' : ''}">
+              <div class="upgrade-plan-name">Starter</div>
+              <div class="upgrade-plan-price">$49<span>/mo</span></div>
+              <div class="upgrade-plan-limit">Up to 500 students</div>
+              ${plan === 'starter'
+                ? '<div class="upgrade-plan-current">Current plan</div>'
+                : '<button onclick="handleUpgrade(\'starter\')" class="btn-upgrade">Pay Now</button>'}
+            </div>
+            <div class="upgrade-plan-card featured${plan === 'growth' ? ' current' : ''}">
+              <div class="upgrade-plan-badge">Most Popular</div>
+              <div class="upgrade-plan-name">Growth</div>
+              <div class="upgrade-plan-price">$99<span>/mo</span></div>
+              <div class="upgrade-plan-limit">Up to 2,000 students</div>
+              ${plan === 'growth'
+                ? '<div class="upgrade-plan-current">Current plan</div>'
+                : '<button onclick="handleUpgrade(\'growth\')" class="btn-upgrade btn-upgrade--featured">Pay Now</button>'}
+            </div>
+            <div class="upgrade-plan-card${plan === 'pro' ? ' current' : ''}">
+              <div class="upgrade-plan-name">Pro</div>
+              <div class="upgrade-plan-price">$199<span>/mo</span></div>
+              <div class="upgrade-plan-limit">Up to 5,000 students</div>
+              ${plan === 'pro'
+                ? '<div class="upgrade-plan-current">Current plan</div>'
+                : '<button onclick="handleUpgrade(\'pro\')" class="btn-upgrade">Pay Now</button>'}
+            </div>
+          </div>
+          <div class="pesapal-note">Secure payment via Pesapal · MTN MoMo, Airtel Money, cards &amp; bank transfer</div>
+          <div style="margin-top:16px;font-size:0.82rem;color:var(--muted);">
+            Need 5,000+ students or multi-campus support?
+            <a href="mailto:admin@faceattend.app?subject=Enterprise Plan" style="color:var(--cyan);">Contact us for Enterprise pricing →</a>
+          </div>
+        </div>`;
+    } else if (plan === 'growth') {
+      upgradeBlock = `
+        <div class="upgrade-section">
+          <p>You're on the <strong>Growth plan</strong> (up to 2,000 students).</p>
+          <p style="margin-top:8px;">Need more capacity? <button onclick="handleUpgrade('pro')" class="btn-upgrade" style="display:inline-block;width:auto;padding:8px 20px;margin-left:8px;">Upgrade to Pro — $199/mo</button></p>
+          <div style="margin-top:16px;font-size:0.82rem;color:var(--muted);">
+            Need 5,000+ students? <a href="mailto:admin@faceattend.app?subject=Enterprise Plan" style="color:var(--cyan);">Contact us for Enterprise →</a>
+          </div>
+        </div>`;
+    } else if (plan === 'pro') {
+      upgradeBlock = `
+        <div class="upgrade-section">
+          <p>You're on the <strong>Pro plan</strong> (up to 5,000 students).</p>
+          <div style="margin-top:12px;font-size:0.82rem;color:var(--muted);">
+            Need 5,000+ students or multi-campus support? <a href="mailto:admin@faceattend.app?subject=Enterprise Plan" style="color:var(--cyan);">Contact us for Enterprise →</a>
+          </div>
+        </div>`;
+    } else if (plan === 'enterprise') {
+      upgradeBlock = `
+        <div class="upgrade-section">
+          <p style="color:var(--purple);">You're on the <strong>Enterprise plan</strong>.</p>
+          <p style="margin-top:8px;font-size:0.85rem;color:var(--muted);">For billing inquiries or changes, contact us directly.</p>
+          <button class="btn-contact-enterprise" onclick="window.open('mailto:admin@faceattend.app?subject=Enterprise Billing','_blank')">Contact Support</button>
+        </div>`;
+    }
+
     document.getElementById('billing-wrap').innerHTML = `
       <div class="billing-grid">
         <div class="billing-card cyan">
           <div class="metric-label">Current Plan</div>
-          <div class="metric-value" style="color:${planColor};">${planLabel}</div>
-          <div class="metric-sub" style="margin-top:8px;">${inst.name || currentInstitutionId}</div>
+          <div class="metric-value">${planLabels[plan] || plan}</div>
         </div>
-        ${expiryCard}
+        ${trialBlock}
       </div>
       ${upgradeBlock}`;
   } catch (e) {
     document.getElementById('billing-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Error: ${e.message}</div>`;
+      '<div class="loading" style="color:var(--red)">Failed to load billing info.</div>';
+  }
+}
+
+async function handleUpgrade(plan) {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) return alert('Please log in first.');
+
+  const { data: profile } = await client
+    .from('profiles')
+    .select('full_name, institution_id')
+    .eq('id', user.id)
+    .single();
+
+  const nameParts = (profile?.full_name || 'User Name').split(' ');
+
+  try {
+    const resp = await fetch('/api/cart/create-cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan,
+        email:          user.email,
+        first_name:     nameParts[0] || 'User',
+        last_name:      nameParts[1] || 'Name',
+        phone:          '',
+        institution_id: profile?.institution_id || '',
+      }),
+    });
+    const data = await resp.json();
+    if (data.redirect_url) {
+      window.location.href = data.redirect_url;
+    } else {
+      alert('Payment initiation failed: ' + (data.detail || JSON.stringify(data)));
+    }
+  } catch (e) {
+    alert('Something went wrong. Please try again or contact admin@faceattend.app');
   }
 }
 
