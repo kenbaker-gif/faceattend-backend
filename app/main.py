@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 import logging
+from fastapi.staticfiles import StaticFiles
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -75,6 +76,8 @@ app = FastAPI(
     title="Smart Attendance — Upload Service",
     lifespan=lifespan
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
