@@ -10,7 +10,7 @@ if (typeof supabase === 'undefined') {
 }
 
 const SUPABASE_URL      = "https://xrlsltunfgjxooyyrora.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhybHNsdHVuZmdqeG9veXlyb3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNDczODEsImV4cCI6MjA4MDYyMzM4MX0.BWr27wHWGt6a3gWnD2ocGdQBL0_sH0HK-YHUcJsrlC0";
+const SUPABASE_ANON_KEY = "sb_publishable_qRH90RKcsglvtumJPWDxng_ju9Lploh";
 function faceattendApiBase() {
   if (typeof location === "undefined") return "https://faceattend.app";
   const host = location.hostname;

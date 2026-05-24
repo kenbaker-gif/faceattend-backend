@@ -1,377 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FaceAttend — AI Attendance for Universities</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --black:   #080810;
-  --surface: #0f0f1c;
-  --border:  #1a1a2e;
-  --cyan:    #00f5c4;
-  --orange:  #ff6b35;
-  --white:   #eeeef5;
-  --muted:   #5a5a7a;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--black);
-  color: var(--white);
-  font-family: 'Instrument Sans', sans-serif;
-  overflow-x: hidden;
-}
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none; z-index: 0;
-}
-.grid-bg {
-  position: fixed; inset: 0;
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: 0.4; pointer-events: none; z-index: 0;
-}
-
-/* ── NAV ── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 48px;
-  background: rgba(8,8,16,0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-}
-.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.03em; }
-.logo span { color: var(--cyan); }
-nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; letter-spacing: 0.05em; transition: color 0.2s; }
-nav a:hover { color: var(--white); }
-.nav-links { display: flex; gap: 32px; align-items: center; }
-.btn-nav {
-  background: var(--cyan) !important; color: var(--black) !important;
-  padding: 8px 20px; border-radius: 6px; font-weight: 600;
-  font-size: 0.8rem !important; letter-spacing: 0.08em !important;
-}
-
-/* ── HERO ── */
-.hero {
-  position: relative; z-index: 1;
-  min-height: 100vh; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  text-align: center; padding: 120px 48px 80px;
-}
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(0,245,196,0.08); border: 1px solid rgba(0,245,196,0.2);
-  border-radius: 100px; padding: 6px 16px;
-  font-size: 0.75rem; color: var(--cyan);
-  letter-spacing: 0.1em; text-transform: uppercase;
-  margin-bottom: 32px; animation: fadeUp 0.6s ease both;
-}
-.hero-badge::before {
-  content: ''; width: 6px; height: 6px;
-  background: var(--cyan); border-radius: 50%; animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.5; transform: scale(1.4); }
-}
-h1 {
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(2.8rem, 8vw, 6rem);
-  font-weight: 800; line-height: 0.95;
-  letter-spacing: -0.04em; margin-bottom: 24px;
-  animation: fadeUp 0.6s 0.1s ease both;
-}
-h1 .accent { color: var(--cyan); }
-h1 .accent-orange { color: var(--orange); }
-.hero-sub {
-  font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted);
-  max-width: 560px; line-height: 1.7; margin-bottom: 48px;
-  animation: fadeUp 0.6s 0.2s ease both;
-}
-.hero-cta {
-  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
-  animation: fadeUp 0.6s 0.3s ease both;
-}
-.btn-primary {
-  background: var(--cyan); color: var(--black);
-  padding: 14px 32px; border-radius: 8px;
-  font-family: 'Syne', sans-serif; font-weight: 700;
-  font-size: 0.9rem; letter-spacing: 0.05em;
-  text-decoration: none; border: none; cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,245,196,0.3); }
-.btn-secondary {
-  background: transparent; color: var(--white);
-  padding: 14px 32px; border-radius: 8px;
-  font-family: 'Syne', sans-serif; font-weight: 600;
-  font-size: 0.9rem; letter-spacing: 0.05em;
-  text-decoration: none; border: 1px solid var(--border); cursor: pointer;
-  transition: border-color 0.2s, transform 0.2s;
-}
-.btn-secondary:hover { border-color: var(--muted); transform: translateY(-2px); }
-
-/* ── STATS BAR ── */
-.stats-bar {
-  position: relative; z-index: 1;
-  display: flex; justify-content: center;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.stat-item {
-  flex: 1; max-width: 220px; padding: 28px 24px;
-  text-align: center; border-right: 1px solid var(--border);
-}
-.stat-item:last-child { border-right: none; }
-.stat-num { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--cyan); line-height: 1; }
-.stat-label { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
-
-/* ── HOW IT WORKS ── */
-.how-it-works {
-  position: relative; z-index: 1;
-  padding: 100px 48px; max-width: 1200px; margin: 0 auto;
-}
-.section-label { font-size: 0.72rem; color: var(--cyan); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 16px; }
-.section-title {
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 800; letter-spacing: -0.03em;
-  margin-bottom: 64px; max-width: 500px;
-}
-.steps-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px;
-}
-.step-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; padding: 36px 32px; transition: border-color 0.2s;
-}
-.step-card:hover { border-color: rgba(0,245,196,0.3); }
-.step-num {
-  font-family: 'Syne', sans-serif; font-size: 3rem; font-weight: 800;
-  color: rgba(0,245,196,0.1); line-height: 1; margin-bottom: 16px;
-}
-.step-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
-.step-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
-.step-icon { font-size: 1.8rem; margin-bottom: 16px; }
-
-/* ── FEATURES ── */
-.features {
-  position: relative; z-index: 1;
-  padding: 100px 48px; max-width: 1200px; margin: 0 auto;
-}
-.features-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2px; background: var(--border);
-  border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
-}
-.feature-card { background: var(--surface); padding: 40px 36px; transition: background 0.2s; }
-.feature-card:hover { background: #131325; }
-.feature-icon {
-  width: 44px; height: 44px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem; margin-bottom: 20px;
-}
-.feature-icon.cyan   { background: rgba(0,245,196,0.1); }
-.feature-icon.orange { background: rgba(255,107,53,0.1); }
-.feature-icon.blue   { background: rgba(74,158,255,0.1); }
-.feature-icon.purple { background: rgba(167,139,250,0.1); }
-.feature-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
-.feature-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
-
-/* ── PRICING ── */
-.pricing-section {
-  position: relative; z-index: 1;
-  padding: 100px 48px; max-width: 1200px; margin: 0 auto;
-}
-.pricing-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;
-}
-.pricing-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 20px; padding: 40px 36px; position: relative;
-  transition: border-color 0.2s, transform 0.2s;
-}
-.pricing-card:hover { transform: translateY(-4px); }
-.pricing-card.featured {
-  border-color: rgba(0,245,196,0.4);
-  background: linear-gradient(135deg, rgba(0,245,196,0.05), transparent);
-}
-.pricing-card.featured::before {
-  content: 'MOST POPULAR';
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: var(--cyan); color: var(--black);
-  font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 800;
-  letter-spacing: 0.15em; padding: 4px 16px; border-radius: 100px;
-}
-.pricing-plan { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 12px; }
-.pricing-price { font-family: 'Syne', sans-serif; font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
-.pricing-price span { font-size: 1.2rem; color: var(--muted); }
-.pricing-period { font-size: 0.8rem; color: var(--muted); margin-bottom: 32px; }
-.pricing-features { list-style: none; margin-bottom: 32px; }
-.pricing-features li {
-  font-size: 0.88rem; color: var(--muted); padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-.pricing-features li:last-child { border-bottom: none; }
-.pricing-features li::before { content: '✓'; color: var(--cyan); font-weight: 700; flex-shrink: 0; }
-.btn-pricing {
-  width: 100%; padding: 14px; border-radius: 8px;
-  font-family: 'Syne', sans-serif; font-weight: 700;
-  font-size: 0.88rem; letter-spacing: 0.05em;
-  cursor: pointer; border: none; transition: transform 0.2s, box-shadow 0.2s;
-  text-decoration: none; display: block; text-align: center;
-}
-.btn-pricing.outline { background: transparent; color: var(--white); border: 1px solid var(--border); }
-.btn-pricing.outline:hover { border-color: var(--cyan); color: var(--cyan); }
-.btn-pricing.filled { background: var(--cyan); color: var(--black); }
-.btn-pricing.filled:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,245,196,0.3); }
-
-/* ── SIGNUP ── */
-.signup-section {
-  position: relative; z-index: 1;
-  padding: 100px 24px; display: flex; justify-content: center;
-}
-.signup-container { width: 100%; max-width: 560px; }
-.signup-header { text-align: center; margin-bottom: 48px; }
-.signup-header h2 {
-  font-family: 'Syne', sans-serif; font-size: clamp(1.8rem, 4vw, 2.4rem);
-  font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px;
-}
-.signup-header p { color: var(--muted); font-size: 0.95rem; line-height: 1.6; }
-.signup-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 20px; padding: 48px;
-}
-.form-group { margin-bottom: 20px; }
-label {
-  display: block; font-size: 0.75rem; color: var(--muted);
-  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;
-}
-input[type="text"], input[type="email"], input[type="tel"] {
-  width: 100%; background: var(--black);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 12px 16px; color: var(--white);
-  font-family: 'Instrument Sans', sans-serif; font-size: 0.95rem;
-  transition: border-color 0.2s, box-shadow 0.2s; outline: none;
-}
-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,245,196,0.08); }
-input::placeholder { color: var(--muted); }
-.trial-note {
-  background: rgba(0,245,196,0.06); border: 1px solid rgba(0,245,196,0.15);
-  border-radius: 8px; padding: 14px 16px; font-size: 0.82rem; color: var(--cyan);
-  margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
-}
-.btn-submit {
-  width: 100%; background: var(--cyan); color: var(--black);
-  padding: 15px; border-radius: 8px;
-  font-family: 'Syne', sans-serif; font-weight: 700;
-  font-size: 0.95rem; letter-spacing: 0.05em; border: none; cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-}
-.btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,245,196,0.3); }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-.status-msg {
-  border-radius: 8px; padding: 14px 16px; font-size: 0.85rem;
-  margin-top: 16px; display: none; line-height: 1.6;
-}
-.status-msg.success { background: rgba(0,245,196,0.08); border: 1px solid rgba(0,245,196,0.2); color: var(--cyan); }
-.status-msg.error   { background: rgba(255,80,80,0.08);  border: 1px solid rgba(255,80,80,0.2);  color: #ff5050; }
-
-/* ── FOOTER ── */
-footer {
-  position: relative; z-index: 1;
-  border-top: 1px solid var(--border);
-  padding: 40px 48px;
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; gap: 24px;
-  color: var(--muted); font-size: 0.8rem;
-}
-.footer-contact a { color: var(--cyan); text-decoration: none; font-size: 0.85rem; transition: opacity 0.2s; }
-.footer-contact a:hover { opacity: 0.7; }
-.footer-center { text-align: center; }
-.footer-right { text-align: right; }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── MOBILE ── */
-@media (max-width: 768px) {
-  nav { padding: 14px 20px; }
-  .nav-links { gap: 10px; }
-  nav a { font-size: 0.72rem; letter-spacing: 0; }
-  .btn-nav { padding: 6px 12px; font-size: 0.68rem !important; letter-spacing: 0.04em !important; }
-
-  .hero { padding: 100px 20px 60px; }
-  h1 { font-size: clamp(2rem, 9vw, 3rem); letter-spacing: -0.02em; }
-  .hero-sub { font-size: 0.92rem; }
-  .hero-cta { flex-direction: column; width: 100%; }
-  .btn-primary, .btn-secondary { width: 100%; text-align: center; }
-
-  .stats-bar { display: grid; grid-template-columns: 1fr 1fr; }
-  .stat-item { max-width: 100%; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  .stat-item:nth-child(2) { border-right: none; }
-  .stat-item:nth-child(3) { border-bottom: none; }
-  .stat-item:nth-child(4) { border-right: none; border-bottom: none; }
-
-  .how-it-works, .features, .pricing-section { padding: 60px 20px; }
-  .section-title { margin-bottom: 32px; }
-  .steps-grid { grid-template-columns: 1fr; }
-  .features-grid { grid-template-columns: 1fr 1fr; }
-  .feature-card { padding: 24px 16px; }
-  .feature-title { font-size: 0.85rem; }
-  .feature-desc { font-size: 0.75rem; }
-  .pricing-grid { grid-template-columns: 1fr; }
-
-  .signup-section { padding: 60px 20px; }
-  .signup-card { padding: 28px 20px; }
-
-  footer { grid-template-columns: 1fr; text-align: center; padding: 32px 20px; gap: 16px; }
-  .footer-right { text-align: center; }
-}
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FaceAttend — AI Face Recognition Attendance for Universities</title>
+  <meta name="description" content="Replace paper registers with instant face recognition. Students verified in under a second. Real-time reports for lecturers. Built for African universities."/>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/styles.css"/>
 </head>
 <body>
 <div class="grid-bg"></div>
 
+<!-- NAV -->
 <nav>
   <div class="logo">Face<span>Attend</span></div>
   <div class="nav-links">
     <a href="#how-it-works">How It Works</a>
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
-    <a href="/dashboard" class="btn-nav" style="background:transparent !important; color:var(--cyan) !important; border:1px solid rgba(0,245,196,0.3);">Dashboard</a>
+    <a href="/dashboard" class="btn-nav btn-nav--ghost">Dashboard</a>
     <a href="#signup" class="btn-nav">Get Started</a>
-</div>
+  </div>
+  <button class="nav-hamburger" id="nav-toggle" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">AI-Powered · Face Recognition · Real-time</div>
-  <h1>Attendance that<br>runs on <span class="accent">faces</span>,<br>not <span class="accent-orange">paper</span>.</h1>
-  <p class="hero-sub">Replace manual registers with instant face recognition. Students scan in under a second. Lecturers get real-time reports.</p>
+  <div class="hero-badge">
+    <span class="hero-badge__dot"></span>
+    AI-Powered · Face Recognition · Built for Africa
+  </div>
+  <h1>Take attendance<br>in <span class="accent">seconds</span>,<br>not <span class="accent-orange">hours</span>.</h1>
+  <p class="hero-sub">
+    FaceAttend replaces paper registers with instant face verification.
+    Lecturers scan students in under a second — no IDs, no signatures, no delays.
+  </p>
   <div class="hero-cta">
     <a href="#signup" class="btn-primary">Start Free Trial</a>
     <a href="#how-it-works" class="btn-secondary">See How It Works</a>
   </div>
+  <div class="hero-scroll-hint">Scroll to explore</div>
 </section>
 
 <!-- STATS -->
 <div class="stats-bar">
-  <div class="stat-item"><div class="stat-num">0.03s</div><div class="stat-label">Verification Speed</div></div>
-  <div class="stat-item"><div class="stat-num">98%+</div><div class="stat-label">Recognition Accuracy</div></div>
-  <div class="stat-item"><div class="stat-num">30</div><div class="stat-label">Day Free Trial</div></div>
-  <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">Photos to Enroll</div></div>
+  <div class="stat-item">
+    <div class="stat-num">0.03s</div>
+    <div class="stat-label">Avg. Verification Time</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">98%+</div>
+    <div class="stat-label">Recognition Accuracy</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">30</div>
+    <div class="stat-label">Day Free Trial</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">4</div>
+    <div class="stat-label">Photos to Enroll a Student</div>
+  </div>
 </div>
 
 <!-- HOW IT WORKS -->
@@ -383,19 +74,19 @@ footer {
       <div class="step-num">01</div>
       <div class="step-icon">🏛️</div>
       <div class="step-title">Register Your Institution</div>
-      <div class="step-desc">Fill in your university details on this page. You'll get a 30-day free trial instantly with no credit card required.</div>
+      <div class="step-desc">Sign up on this page. Your institution account is created instantly with a 30-day free trial — no credit card required.</div>
     </div>
     <div class="step-card">
       <div class="step-num">02</div>
       <div class="step-icon">📸</div>
       <div class="step-title">Enroll Students</div>
-      <div class="step-desc">Use the Android app to capture 4 photos per student. They're live in the system immediately — no manual sync needed.</div>
+      <div class="step-desc">Use the Android app to capture 4 photos per student. They're live in the system immediately with no manual sync needed.</div>
     </div>
     <div class="step-card">
       <div class="step-num">03</div>
       <div class="step-icon">⚡</div>
-      <div class="step-title">Scan & Report</div>
-      <div class="step-desc">Point the camera at a student. Face recognized in 0.03 seconds. Real-time attendance logs available on your dashboard instantly.</div>
+      <div class="step-title">Scan &amp; Get Reports</div>
+      <div class="step-desc">Point the camera at a student. Face recognized in 0.03 seconds. Attendance logs appear on the dashboard in real time.</div>
     </div>
   </div>
 </section>
@@ -408,57 +99,123 @@ footer {
     <div class="feature-card">
       <div class="feature-icon cyan">🧠</div>
       <div class="feature-title">InsightFace AI Engine</div>
-      <div class="feature-desc">Production-grade face recognition. Identifies students in 0.03 seconds with 98%+ accuracy even in challenging lighting.</div>
+      <div class="feature-desc">Production-grade face recognition identifies students in 0.03 seconds with 98%+ accuracy — even in challenging lighting conditions.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon orange">📱</div>
-      <div class="feature-title">Mobile-First Android App</div>
-      <div class="feature-desc">Native Android app for lecturers and admins. Register students in 4 photos. Scan from any angle, any distance.</div>
+      <div class="feature-title">Native Android App</div>
+      <div class="feature-desc">Dedicated Android app for lecturers and admins. Enroll students with 4 photos. Scan from any angle, in any classroom.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon blue">📊</div>
-      <div class="feature-title">Live Web Dashboard</div>
-      <div class="feature-desc">Real-time attendance analytics accessible from any browser. Filter by date, student, or course. Export CSV in one click.</div>
+      <div class="feature-title">Real-Time Web Dashboard</div>
+      <div class="feature-desc">Live attendance analytics accessible from any browser. Filter by date, student, or course unit. Export to CSV in one click.</div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon purple">🏛️</div>
-      <div class="feature-title">Multi-Institution</div>
-      <div class="feature-desc">Each university gets its own isolated environment. Data never crosses institution boundaries. Complete privacy guaranteed.</div>
+      <div class="feature-icon purple">🤖</div>
+      <div class="feature-title">AI Attendance Summaries</div>
+      <div class="feature-desc">Generate instant AI-written summaries of attendance trends per institution. Powered by DeepSeek — no manual report writing needed.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon cyan">🛡️</div>
       <div class="feature-title">Anti-Spoofing Protection</div>
-      <div class="feature-desc">Liveness detection blocks photo and screen spoofing attempts. Students can't mark attendance using someone else's photo.</div>
+      <div class="feature-desc">Liveness detection blocks photo and screen spoofing. Students cannot mark attendance using a printed photo or another person's face.</div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon orange">⚡</div>
-      <div class="feature-title">Instant Auto-Sync</div>
-      <div class="feature-desc">Register a student and they're live immediately. No manual sync jobs. No delays. Real-time across all devices.</div>
+      <div class="feature-icon orange">🏛️</div>
+      <div class="feature-title">Multi-Institution Support</div>
+      <div class="feature-desc">Every university gets its own isolated environment. Data never crosses institutional boundaries. Complete privacy guaranteed.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon blue">📚</div>
+      <div class="feature-title">Course Unit Management</div>
+      <div class="feature-desc">Assign students to multiple course units. Lecturers select the active class before scanning — attendance is logged per unit automatically.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon purple">🔐</div>
+      <div class="feature-title">Audit Logs &amp; Security</div>
+      <div class="feature-desc">Full audit trail of every admin action and login. Known device tracking, daily digest emails, and security analytics for super admins.</div>
     </div>
   </div>
 </section>
-
-<!-- PILOT BADGE — uncomment when NKU/MUK formally onboarded
-<div class="pilot-section">
-  <div class="pilot-card">
-    <div class="pilot-text">
-      <h3>Trusted by leading Ugandan universities</h3>
-      <p>FaceAttend is currently being piloted at two of Uganda's top institutions. Join them and modernize your attendance system today.</p>
-    </div>
-    <div class="pilot-badges">
-      <div class="pilot-badge">Nkumba University</div>
-      <div class="pilot-badge">Makerere University</div>
-    </div>
-  </div>
-</div>
--->
 
 <!-- PRICING -->
 <section class="pricing-section" id="pricing">
   <div class="section-label">Pricing</div>
   <h2 class="section-title">Simple, transparent pricing.</h2>
-  <div class="pricing-grid" id="pricing-grid">
-    <div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;">Loading plans...</div>
+  <p class="pricing-sub">All plans include a 30-day free trial. No credit card required to start.</p>
+  <div class="pricing-grid">
+
+    <div class="pricing-card">
+      <div class="pricing-plan">Starter</div>
+      <div class="pricing-price">$49<span> / mo</span></div>
+      <div class="pricing-period">Up to 500 students</div>
+      <ul class="pricing-features">
+        <li>500 student profiles</li>
+        <li>Unlimited course units</li>
+        <li>Android enrollment app</li>
+        <li>Real-time dashboard</li>
+        <li>CSV export</li>
+        <li>Email support</li>
+      </ul>
+      <a href="mailto:admin@faceattend.app?subject=FaceAttend Starter Plan" class="btn-pricing outline">Contact Us</a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="pricing-badge">Most Popular</div>
+      <div class="pricing-plan">Growth</div>
+      <div class="pricing-price">$99<span> / mo</span></div>
+      <div class="pricing-period">Up to 2,000 students</div>
+      <ul class="pricing-features">
+        <li>2,000 student profiles</li>
+        <li>Unlimited course units</li>
+        <li>Android enrollment app</li>
+        <li>Real-time dashboard &amp; CSV export</li>
+        <li>Anti-spoofing liveness detection</li>
+        <li>AI attendance summaries</li>
+        <li>Audit logs &amp; security analytics</li>
+        <li>Priority email support</li>
+      </ul>
+      <a href="mailto:admin@faceattend.app?subject=FaceAttend Growth Plan" class="btn-pricing filled">Contact Us</a>
+    </div>
+
+    <div class="pricing-card">
+      <div class="pricing-plan">Pro</div>
+      <div class="pricing-price">$199<span> / mo</span></div>
+      <div class="pricing-period">Up to 5,000 students</div>
+      <ul class="pricing-features">
+        <li>5,000 student profiles</li>
+        <li>Unlimited course units</li>
+        <li>Android enrollment app</li>
+        <li>Real-time dashboard &amp; CSV export</li>
+        <li>Anti-spoofing liveness detection</li>
+        <li>AI attendance summaries</li>
+        <li>Audit logs &amp; security analytics</li>
+        <li>Coordinator accounts</li>
+        <li>Priority support + SLA</li>
+      </ul>
+      <a href="mailto:admin@faceattend.app?subject=FaceAttend Pro Plan" class="btn-pricing outline">Contact Us</a>
+    </div>
+
+    <div class="pricing-card">
+      <div class="pricing-plan">Enterprise</div>
+      <div class="pricing-price">Custom</div>
+      <div class="pricing-period">5,000+ students · Multi-campus</div>
+      <ul class="pricing-features">
+        <li>Unlimited students</li>
+        <li>Multi-campus support</li>
+        <li>Dedicated server option</li>
+        <li>Enterprise API access</li>
+        <li>On-site training</li>
+        <li>Dedicated account manager</li>
+        <li>Custom SLA &amp; contract</li>
+      </ul>
+      <a href="mailto:admin@faceattend.app?subject=FaceAttend Enterprise" class="btn-pricing outline">Contact Us</a>
+    </div>
+
+  </div>
+  <div class="pricing-trial-note">
+    Not sure which plan fits? <a href="#signup">Start your 30-day free trial</a> — full access, no commitment.
   </div>
 </section>
 
@@ -473,20 +230,22 @@ footer {
     <div class="signup-card">
       <form id="signup-form">
         <div class="form-group">
-          <label>University Name</label>
-          <input type="text" id="university_name" placeholder="e.g. Kampala International University" required/>
+          <label for="university_name">University Name</label>
+          <input type="text" id="university_name" name="university_name" placeholder="e.g. Kampala International University" required/>
         </div>
         <div class="form-group">
-          <label>Admin Full Name</label>
-          <input type="text" id="admin_full_name" placeholder="e.g. Dr. John Mukasa" required/>
+          <label for="admin_full_name">Admin Full Name</label>
+          <input type="text" id="admin_full_name" name="admin_full_name" placeholder="e.g. Dr. John Mukasa" required/>
         </div>
-        <div class="form-group">
-          <label>Admin Email</label>
-          <input type="email" id="admin_email" placeholder="admin@university.ac.ug" required/>
-        </div>
-        <div class="form-group">
-          <label>Phone Number</label>
-          <input type="tel" id="phone" placeholder="+256 700 000 000" required/>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="admin_email">Admin Email</label>
+            <input type="email" id="admin_email" name="admin_email" placeholder="admin@university.ac.ug" autocomplete="email" required/>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="+256 700 000 000" autocomplete="tel" required/>
+          </div>
         </div>
         <div class="trial-note">
           🎉 30-day free trial · Full access · No credit card needed
@@ -503,134 +262,31 @@ footer {
 <!-- FOOTER -->
 <footer>
   <div class="footer-contact">
-    <div style="margin-bottom:6px;">Questions? Reach us at</div>
-    <a href="mailto:abubaker@faceattend.app">admin@faceattend.app</a>
+    <div style="margin-bottom:6px;">Questions?</div>
+    <a href="mailto:admin@faceattend.app">admin@faceattend.app</a>
   </div>
- <div class="footer-center">
-  <div class="logo" style="font-size:1rem;margin-bottom:6px;">Face<span style="color:var(--cyan)">Attend</span></div>
-  <div>Built for African universities · Powered by InsightFace AI</div>
-  <div style="margin-top:8px;">
-    <a href="/privacy" style="color:var(--muted);font-size:0.78rem;">Privacy</a>
-    &nbsp;·&nbsp;
-    <a href="/terms" style="color:var(--muted);font-size:0.78rem;">Terms</a>
+  <div class="footer-center">
+    <div class="logo" style="font-size:1rem;margin-bottom:6px;">Face<span style="color:var(--cyan)">Attend</span></div>
+    <div>Attendance in Seconds, Not Hours</div>
+    <div style="margin-top:4px;font-size:0.75rem;">Built for African universities · Powered by InsightFace AI</div>
+    <div style="margin-top:10px;">
+      <a href="/privacy" style="color:var(--muted);font-size:0.78rem;">Privacy</a>
+      &nbsp;·&nbsp;
+      <a href="/terms" style="color:var(--muted);font-size:0.78rem;">Terms</a>
+    </div>
   </div>
-</div>
   <div class="footer-right">
-  © 2026 FaceAttend · Uganda
-  <div style="margin-top:12px;">
-    <a href="https://websitelaunches.com/site/faceattend.app" target="_blank" rel="noopener">
-      <img src="https://websitelaunches.com/badge/faceattend.app.svg?theme=dark"
-           alt="Established online - Public launch record"
-           width="180" height="39"/>
-    </a>
+    © 2026 FaceAttend · Uganda
+    <div style="margin-top:12px;">
+      <a href="https://websitelaunches.com/site/faceattend.app" target="_blank" rel="noopener">
+        <img src="https://websitelaunches.com/badge/faceattend.app.svg?theme=dark"
+             alt="Established online - Public launch record"
+             width="180" height="39"/>
+      </a>
+    </div>
   </div>
-</div>
 </footer>
 
-<script>
-function faceattendApiBase() {
-  if (typeof location === "undefined") return "https://faceattend.app";
-  const host = location.hostname;
-  if (host === "faceattend.app" || host.endsWith(".faceattend.app")) {
-    return `${location.protocol}//${location.host}`;
-  }
-  return "https://faceattend.app";
-}
-const API_URL = faceattendApiBase();
-
-// ── Load pricing plans dynamically from DB ──
-async function loadPlans() {
-  try {
-    const resp  = await fetch(`${API_URL}/plans`);
-    const data  = await resp.json();
-    const plans = data.plans || [];
-    const grid  = document.getElementById('pricing-grid');
-    if (!grid || !plans.length) return;
-
-    grid.innerHTML = plans.map(plan => {
-      const isFeatured = plan.id === 'standard';
-      const price      = plan.price_usd === 0
-        ? 'Free'
-        : plan.price_usd === null
-          ? 'Custom'
-          : `$${plan.price_usd}`;
-      const priceHtml  = (plan.price_usd > 0 && plan.price_usd !== null)
-        ? `${price} <span>/ mo</span>`
-        : price;
-      const period     = plan.billing || '';
-      const features   = (plan.features || []).map(f => `<li>${f}</li>`).join('');
-      const btnHref    = plan.id === 'enterprise'
-        ? 'mailto:abubaker@faceattend.app'
-        : '#signup';
-      const btnClass   = isFeatured ? 'filled' : 'outline';
-      const btnText    = plan.id === 'trial'
-        ? 'Start Free Trial'
-        : plan.id === 'enterprise'
-          ? 'Contact Us'
-          : 'Get Started';
-
-      return `
-        <div class="pricing-card ${isFeatured ? 'featured' : ''}">
-          <div class="pricing-plan">${plan.name}</div>
-          <div class="pricing-price">${priceHtml}</div>
-          <div class="pricing-period">${period}</div>
-          <ul class="pricing-features">${features}</ul>
-          <a href="${btnHref}" class="btn-pricing ${btnClass}">${btnText}</a>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    console.error('Failed to load plans:', e);
-  }
-}
-
-loadPlans();
-
-// ── Signup form ──
-document.getElementById('signup-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn    = document.getElementById('submit-btn');
-  const status = document.getElementById('status-msg');
-
-  btn.disabled    = true;
-  btn.textContent = 'Creating account...';
-  status.style.display = 'none';
-
-  const formData = new FormData();
-  formData.append('university_name', document.getElementById('university_name').value.trim());
-  formData.append('admin_full_name', document.getElementById('admin_full_name').value.trim());
-  formData.append('admin_email',     document.getElementById('admin_email').value.trim());
-  formData.append('phone',           document.getElementById('phone').value.trim());
-
-  try {
-    const resp = await fetch(`${API_URL}/register-institution`, {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await resp.json();
-
-    if (resp.ok && data.success) {
-      status.className     = 'status-msg success';
-      status.style.display = 'block';
-      status.innerHTML     = `
-        <strong>Welcome to FaceAttend!</strong><br><br>
-        Your institution <strong>${data.institution_name}</strong> has been created.<br>
-        Institution ID: <strong>${data.institution_id}</strong><br><br>
-        Check <strong>${document.getElementById('admin_email').value}</strong> to set your password and start your ${data.trial_days}-day free trial.
-      `;
-      document.getElementById('signup-form').reset();
-      btn.textContent = 'Account Created!';
-    } else {
-      throw new Error(data.detail || 'Registration failed. Please try again.');
-    }
-  } catch (err) {
-    status.className     = 'status-msg error';
-    status.style.display = 'block';
-    status.textContent   = err.message;
-    btn.disabled         = false;
-    btn.textContent      = 'Create Institution Account';
-  }
-});
-</script>
+<script src="/static/main.js"></script>
 </body>
 </html>
