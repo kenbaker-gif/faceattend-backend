@@ -97,7 +97,7 @@ footer {
 <div class="container">
   <div class="page-label">Legal</div>
   <h1>Privacy Policy</h1>
-  <p class="last-updated">Last updated: March 2026</p>
+  <p class="last-updated">Last updated: 1 March 2026</p>
 
   <div class="highlight">
     FaceAttend is committed to protecting your privacy and complying with the Uganda Data Protection and Privacy Act, 2019 (PDPA). This policy explains how we collect, use, store, and protect your personal data.
@@ -115,6 +115,7 @@ footer {
     <li><strong>Attendance records</strong> — timestamps, verification status, and confidence scores</li>
     <li><strong>Administrator account data</strong> — name, email address, phone number, and institution affiliation</li>
     <li><strong>Usage data</strong> — login timestamps and system activity logs</li>
+    <li><strong>Technical data</strong> — browser type, device type, and IP address collected automatically when you use the web dashboard</li>
   </ul>
 
   <h2>3. How We Collect Data</h2>
@@ -123,6 +124,7 @@ footer {
     <li>The FaceAttend Android application — when administrators capture student face photos during enrollment</li>
     <li>The institution registration form at faceattend.app — when universities sign up</li>
     <li>Automatic system logs generated during use of the service</li>
+    <li>Cookies and session tokens on the web dashboard — see Section 15 for details</li>
   </ul>
 
   <h2>4. Legal Basis for Processing</h2>
@@ -138,6 +140,7 @@ footer {
   <ul>
     <li>To verify student identity during attendance sessions</li>
     <li>To generate and display attendance reports to authorized administrators</li>
+    <li>To generate AI-powered attendance summaries using DeepSeek (see Section 8 for details)</li>
     <li>To manage user accounts and institution profiles</li>
     <li>To send account-related emails including invitations and password resets</li>
     <li>To maintain system security and prevent fraud or spoofing</li>
@@ -154,7 +157,7 @@ footer {
     <li>All data is encrypted in transit using HTTPS/TLS</li>
     <li>Face images are stored in private buckets — not publicly accessible</li>
     <li>Access to face images requires time-limited signed URLs</li>
-    <li>All API endpoints require authenticated JWT tokens</li>
+    <li>All API endpoints require authenticated JWT tokens or SHA-256 API keys</li>
     <li>Institution data is fully isolated — no data crosses institution boundaries</li>
     <li>Anti-spoofing liveness detection prevents unauthorized access attempts</li>
   </ul>
@@ -162,7 +165,9 @@ footer {
 
   <h2>7. Data Retention</h2>
   <ul>
-    <li><strong>Biometric data (face images)</strong> — retained for the duration of the institution's active subscription. Deleted upon account termination or upon request.</li>
+    <li><strong>Biometric data (face images)</strong> — retained for the duration of the institution's active subscription. Deleted within 30 days of account termination or upon request.</li>
+    <li><strong>Facial embeddings (mathematical vectors)</strong> — retained for the duration of the active subscription and deleted within 30 days of account termination. Embeddings are stored separately from identity data and cannot be reverse-engineered into facial images.</li>
+    <li><strong>Trial period data</strong> — if an institution does not convert to a paid plan after the 30-day free trial, all data including biometric data, student records, and attendance logs will be permanently deleted within 14 days of trial expiry.</li>
     <li><strong>Attendance records</strong> — retained for up to 3 years to support institutional reporting needs</li>
     <li><strong>Account data</strong> — retained for the duration of the account and up to 90 days after termination</li>
   </ul>
@@ -173,6 +178,7 @@ footer {
     <li><strong>Supabase</strong> — for database and storage services</li>
     <li><strong>DigitalOcean</strong> — for application hosting</li>
     <li><strong>Zoho</strong> — for transactional email delivery</li>
+    <li><strong>DeepSeek</strong> — for AI-generated attendance summaries. Only aggregated, anonymised attendance statistics (not biometric data or student names) are sent to DeepSeek for processing. DeepSeek's privacy policy is available at <a href="https://www.deepseek.com/privacy" target="_blank" rel="noopener">deepseek.com/privacy</a>.</li>
     <li>Law enforcement or regulatory bodies — only when required by Ugandan law</li>
   </ul>
 
@@ -196,6 +202,7 @@ footer {
     <li>Facial embeddings (mathematical vectors) are stored separately from identity data</li>
     <li>Institutions must obtain informed consent from students before enrollment</li>
     <li>Students may request deletion of their biometric data at any time through their institution administrator</li>
+    <li>Biometric data is never used to train AI models or shared with any AI provider</li>
   </ul>
 
   <h2>11. Data Breach Notification</h2>
@@ -213,7 +220,16 @@ footer {
     <li>Email: <a href="mailto:abubaker@faceattend.app">admin@faceattend.app</a></li>
     <li>Website: <a href="https://faceattend.app">faceattend.app</a></li>
   </ul>
-  <p>You also have the right to lodge a complaint with the Personal Data Protection Office (PDPO) of Uganda at <a href="https://pdpo.go.ug" target="_blank">pdpo.go.ug</a>.</p>
+  <p>You also have the right to lodge a complaint with the Personal Data Protection Office (PDPO) of Uganda at <a href="https://pdpo.go.ug" target="_blank" rel="noopener">pdpo.go.ug</a>.</p>
+
+  <h2>15. Cookies and Session Tokens</h2>
+  <p>The FaceAttend web dashboard uses the following:</p>
+  <ul>
+    <li><strong>Session tokens (JWT)</strong> — stored in browser memory or local storage to keep you logged in. These are essential for the service to function and cannot be disabled.</li>
+    <li><strong>No third-party tracking cookies</strong> — we do not use advertising cookies, analytics trackers, or any third-party cookies on our platform.</li>
+  </ul>
+  <p>The FaceAttend marketing website (faceattend.app) does not use any cookies or tracking scripts.</p>
+
 </div>
 
 <footer>
