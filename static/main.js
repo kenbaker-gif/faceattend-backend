@@ -19,7 +19,6 @@ function initSignupForm() {
     const btn    = document.getElementById('submit-btn');
     const status = document.getElementById('status-msg');
 
-    // Capture values before any reset
     const universityName = document.getElementById('university_name').value.trim();
     const adminFullName  = document.getElementById('admin_full_name').value.trim();
     const adminEmail     = document.getElementById('admin_email').value.trim();
@@ -54,6 +53,11 @@ function initSignupForm() {
         `;
         form.reset();
         btn.textContent = 'Account Created ✓';
+
+        // Clear POST from history after successful submission
+        if (window.history.replaceState) {
+          window.history.replaceState(null, null, window.location.href);
+        }
       } else {
         throw new Error(data.detail || 'Registration failed. Please try again.');
       }
@@ -79,14 +83,30 @@ function initMobileNav() {
     toggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
   });
 
-  // Close menu when a link is clicked
   links.querySelectorAll('a').forEach(a => {
     a.addEventListener('click', () => links.classList.remove('open'));
   });
 }
 
+// ── Scroll hint fade-out ──
+function initScrollHint() {
+  const hint = document.querySelector('.hero-scroll-hint');
+  if (!hint) return;
+
+  window.addEventListener('scroll', () => {
+    const opacity = Math.max(0, 1 - window.scrollY / 120);
+    hint.style.opacity = opacity;
+  }, { passive: true });
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
+  // Prevent form resubmission dialog on refresh
+  if (window.history.replaceState) {
+    window.history.replaceState(null, null, window.location.href);
+  }
+
   initSignupForm();
   initMobileNav();
+  initScrollHint();
 });

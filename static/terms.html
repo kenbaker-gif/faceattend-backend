@@ -97,7 +97,7 @@ footer {
 <div class="container">
   <div class="page-label">Legal</div>
   <h1>Terms of Service</h1>
-  <p class="last-updated">Last updated: March 2026</p>
+  <p class="last-updated">Last updated: 1 March 2026</p>
 
   <div class="highlight">
     By registering an institution or using FaceAttend, you agree to these Terms of Service. Please read them carefully. These terms are governed by the laws of Uganda.
@@ -113,6 +113,7 @@ footer {
     <li>A web-based dashboard for attendance reporting and management</li>
     <li>Automated email notifications and account management tools</li>
     <li>Secure cloud storage for attendance records and biometric data</li>
+    <li>An Enterprise API for programmatic access to attendance data, available on eligible plans</li>
   </ul>
 
   <h2>3. Account Registration</h2>
@@ -125,7 +126,7 @@ footer {
   </ul>
 
   <h2>4. Trial Period</h2>
-  <p>New institutions receive a 30-day free trial with full access to all features. No credit card is required during the trial. At the end of the trial period, continued use of the service requires a paid subscription. We reserve the right to suspend or terminate accounts that remain on an expired trial without converting to a paid plan.</p>
+  <p>New institutions receive a 30-day free trial with full access to all features. No credit card is required during the trial. The free trial is provided without any uptime guarantee or support SLA. At the end of the trial period, continued use of the service requires a paid subscription. We reserve the right to suspend or terminate accounts that remain on an expired trial without converting to a paid plan. All data associated with expired trial accounts that do not convert will be permanently deleted within 14 days of trial expiry.</p>
 
   <h2>5. Payment and Billing</h2>
   <p>Paid plans are billed on a monthly basis. All prices are listed in USD on our pricing page and are subject to change with 30 days notice. Failure to pay may result in suspension of your account. We do not offer refunds for partial months of service.</p>
@@ -138,6 +139,8 @@ footer {
     <li>Use the service to discriminate against individuals on the basis of race, gender, religion, or any protected characteristic</li>
     <li>Reverse engineer, decompile, or attempt to extract the source code of FaceAttend</li>
     <li>Share your account credentials with unauthorized parties</li>
+    <li>Screenshot, record, or otherwise capture student biometric data displayed in the dashboard for any purpose outside of normal institutional administration</li>
+    <li>Enroll more students than your plan permits — plan limits are enforced and violations may result in account suspension</li>
     <li>Use the service in any way that violates applicable Ugandan law</li>
   </ul>
 
@@ -149,6 +152,7 @@ footer {
     <li><strong>Administrator access</strong> — managing who has administrator access to your institution's account</li>
     <li><strong>Compliance</strong> — complying with all applicable laws regarding the use of biometric data in your jurisdiction</li>
     <li><strong>Student notification</strong> — informing students about how their data is used and their rights under applicable law</li>
+    <li><strong>Plan limits</strong> — ensuring that the number of enrolled students does not exceed the limit of your subscribed plan</li>
   </ul>
 
   <h2>8. Data Ownership</h2>
@@ -157,38 +161,52 @@ footer {
   <h2>9. Data Protection</h2>
   <p>We process personal data in accordance with our <a href="/privacy">Privacy Policy</a> and the Uganda Data Protection and Privacy Act, 2019. Both parties agree to comply with applicable data protection laws. Institutions act as data controllers for student data; FaceAttend acts as a data processor on behalf of institutions.</p>
 
-  <h2>10. Service Availability</h2>
+  <h2>10. Enterprise API</h2>
+  <p>Access to the FaceAttend Enterprise API is available on eligible plans. API usage is subject to the following conditions:</p>
+  <ul>
+    <li>API keys must be kept confidential and must not be shared with unauthorized parties</li>
+    <li>Rate limits apply to all API endpoints — exceeding rate limits may result in temporary suspension of API access</li>
+    <li>The API must only be used to access data belonging to your institution — accessing or attempting to access another institution's data is strictly prohibited</li>
+    <li>API access is subject to the same acceptable use conditions in Section 6</li>
+    <li>We reserve the right to revoke API access for any violation of these Terms</li>
+  </ul>
+
+  <h2>11. Service Availability</h2>
   <p>We aim to maintain high availability of the FaceAttend service but do not guarantee 100% uptime. Scheduled maintenance will be communicated in advance where possible. We are not liable for any losses arising from temporary service unavailability.</p>
 
-  <h2>11. Intellectual Property</h2>
+  <h2>12. Force Majeure</h2>
+  <p>FaceAttend shall not be held liable for any failure or delay in performance of the service caused by circumstances beyond our reasonable control, including but not limited to: internet outages, power failures, acts of God, government actions, failures of third-party infrastructure providers (including Supabase and DigitalOcean), or any other event outside our reasonable control. In such circumstances, we will use reasonable efforts to restore the service as quickly as possible.</p>
+
+  <h2>13. Intellectual Property</h2>
   <p>All intellectual property rights in the FaceAttend platform, including software, algorithms, design, and branding, belong to FaceAttend and Ainebyona Abubaker. Nothing in these Terms grants you any rights to our intellectual property except the limited right to use the service as described herein.</p>
 
-  <h2>12. Limitation of Liability</h2>
+  <h2>14. Limitation of Liability</h2>
   <p>To the fullest extent permitted by Ugandan law, FaceAttend shall not be liable for:</p>
   <ul>
     <li>Any indirect, incidental, or consequential damages arising from use of the service</li>
     <li>Loss of data due to circumstances beyond our reasonable control</li>
     <li>Errors in attendance records caused by poor lighting, obstructions, or other environmental factors affecting face recognition accuracy</li>
     <li>Any actions taken by institutions based on attendance data generated by the system</li>
+    <li>Service interruptions caused by third-party infrastructure providers</li>
   </ul>
   <p>Our total liability to you shall not exceed the amount paid by you for the service in the three months preceding the claim.</p>
 
-  <h2>13. Termination</h2>
+  <h2>15. Termination</h2>
   <p>Either party may terminate this agreement at any time. Upon termination:</p>
   <ul>
     <li>Your access to the service will be suspended</li>
     <li>You may request an export of your attendance data within 30 days of termination</li>
-    <li>Biometric data (face images) will be permanently deleted within 30 days</li>
+    <li>Biometric data (face images and embeddings) will be permanently deleted within 30 days</li>
     <li>We reserve the right to terminate accounts that violate these Terms without notice</li>
   </ul>
 
-  <h2>14. Governing Law</h2>
+  <h2>16. Governing Law</h2>
   <p>These Terms are governed by and construed in accordance with the laws of Uganda. Any disputes arising under these Terms shall be subject to the jurisdiction of the courts of Uganda.</p>
 
-  <h2>15. Changes to Terms</h2>
+  <h2>17. Changes to Terms</h2>
   <p>We may update these Terms from time to time. We will notify registered institutions by email of any material changes at least 30 days before they take effect. Continued use of the service after changes take effect constitutes acceptance of the updated Terms.</p>
 
-  <h2>16. Contact</h2>
+  <h2>18. Contact</h2>
   <p>For questions about these Terms, contact us at:</p>
   <ul>
     <li>Email: <a href="mailto:abubaker@faceattend.app">admin@faceattend.app</a></li>
