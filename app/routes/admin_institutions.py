@@ -22,7 +22,7 @@ FREE_EMAIL_DOMAINS = {
     "zoho.com", "ymail.com", "mail.com", "googlemail.com",
 }
 
-PAID_PLANS = {"starter", "growth", "pro", "enterprise"}
+PAID_PLANS = {"paid", "starter", "growth", "pro", "enterprise"}
 
 
 def generate_institution_id(name: str) -> str:
