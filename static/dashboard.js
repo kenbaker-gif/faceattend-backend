@@ -318,7 +318,7 @@ async function login() {
 
   const { data: profile } = await client
     .from('profiles')
-    .select('is_admin, is_super_admin')
+    .select('is_admin, is_super_admin, institution_id')
     .eq('id', data.user.id)
     .single();
 
@@ -334,6 +334,38 @@ async function login() {
     btn.disabled    = false;
     btn.textContent = 'Sign In';
     return;
+  }
+
+  if (!isSuperAdminCheck && profile.institution_id) {
+    const { data: inst } = await client
+      .from('institutions')
+      .select('status')
+      .eq('id', profile.institution_id)
+      .single();
+
+    const status = inst?.status?.toLowerCase().trim();
+
+    if (status === 'suspended') {
+      showLoginError('Your institution has been suspended. Contact support.');
+      await client.auth.signOut();
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) localStorage.removeItem(key);
+      });
+      btn.disabled    = false;
+      btn.textContent = 'Sign In';
+      return;
+    }
+
+    if (status === 'pending') {
+      showLoginError('Your institution is pending approval.');
+      await client.auth.signOut();
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) localStorage.removeItem(key);
+      });
+      btn.disabled    = false;
+      btn.textContent = 'Sign In';
+      return;
+    }
   }
 
   emailEl.value    = '';
@@ -366,6 +398,32 @@ async function initDashboard(session, isFreshLogin = false) {
     currentInstitutionId = profile?.institution_id || null;
     isSuperAdmin         = profile?.is_super_admin === true;
 
+    if (!isSuperAdmin && currentInstitutionId) {
+      const { data: inst } = await client
+        .from('institutions')
+        .select('status')
+        .eq('id', currentInstitutionId)
+        .single();
+
+      const status = inst?.status?.toLowerCase().trim();
+
+      if (status === 'suspended') {
+        await signOutAndClear();
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('dashboard-screen').style.display = 'none';
+        showLoginError('Your institution has been suspended. Contact support.');
+        return;
+      }
+
+      if (status === 'pending') {
+        await signOutAndClear();
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('dashboard-screen').style.display = 'none';
+        showLoginError('Your institution is pending approval.');
+        return;
+      }
+    }
+
     if (isFreshLogin) {
       try {
         const logResp = await fetch(`${DAZZLING_URL}/auth/log-login`, {
@@ -385,11 +443,9 @@ async function initDashboard(session, isFreshLogin = false) {
       }
     }
 
-    // Clear existing dynamic items before building UI
     const tabs = document.getElementById('tabs');
-    tabs.innerHTML = ''; 
+    tabs.innerHTML = '';
 
-    // Helper to generate tabs compliant with your strict CSP
     const createSecureTab = (id, text, targetTab, classNames) => {
       const btn = document.createElement('button');
       btn.className = `tab-btn ${classNames}`;
@@ -399,7 +455,6 @@ async function initDashboard(session, isFreshLogin = false) {
       return btn;
     };
 
-    // 4. Construct navigation structure dynamically
     tabs.appendChild(createSecureTab('tab-btn-attendance', '📅 Attendance', 'attendance', 'attendance-tab'));
     tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
     tabs.appendChild(createSecureTab('tab-btn-aisummary', '🤖 AI Summary', 'aisummary', ''));
@@ -409,8 +464,6 @@ async function initDashboard(session, isFreshLogin = false) {
     }
 
     tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
-
-        
 
     if (isSuperAdmin) {
       const teamInstFilter = document.getElementById('filter-team-inst');
@@ -445,7 +498,6 @@ async function initDashboard(session, isFreshLogin = false) {
 
     tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
 
-    // 5. Pre-fetch essential local dataset caches
     if (!isSuperAdmin && currentInstitutionId) {
       const { data: units } = await client
         .from('course_units')
@@ -456,14 +508,12 @@ async function initDashboard(session, isFreshLogin = false) {
       populateAIScopeUnits();
     }
 
-    // 6. Execute global async routines
     await loadData();
     if (isSuperAdmin) await fetchPendingCount();
 
-    // 7. Transition interface context only after complete initialization success
     document.getElementById('nav-user').textContent = session.user.email;
     document.getElementById('nav-superadmin').style.display = isSuperAdmin ? '' : 'none';
-    
+
     const navInst = document.getElementById('nav-inst');
     if (currentInstitutionId) {
       navInst.textContent = currentInstitutionId;
@@ -1383,7 +1433,7 @@ async function loadBilling() {
   document.getElementById('billing-wrap').innerHTML =
     '<div class="loading"><div class="spinner"></div>Loading billing info...</div>';
   try {
-    const resp = await fetch(`/check-trial/${institutionId}`);
+    const resp = await fetch(`/check-trial/${currentInstitutionId}`);
     const inst = await resp.json();
     const plan     = inst.plans || 'trial';
     const daysLeft = inst.days_left ?? null;
