@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FaceAttend — Dashboard</title>
 <link rel="icon" type="image/x-icon" href="/static/admin_favicon.ico">
-<link rel="stylesheet" href="/static/dashboard.css">
+<link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
 <body>
 <div class="grid-bg"></div>
@@ -128,7 +128,103 @@
   </div>
 </div>
 
+<!-- INVITE LECTURER MODAL -->
+<div class="modal-overlay" id="invite-lecturer-modal">
+  <div class="modal">
+    <h3>Add Lecturer</h3>
+    <p>They will be notified by email and do not need a password for this workflow.</p>
+    <div class="invite-form">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="invite-lecturer-name" placeholder="e.g. Dr. James Okello" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="invite-lecturer-email" placeholder="lecturer@university.edu" autocomplete="off"/>
+      </div>
+      <div class="invite-error" id="invite-lecturer-error"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn-cancel" onclick="closeInviteLecturerModal()">Cancel</button>
+      <button class="btn-send-invite" id="send-lecturer-invite-btn" onclick="sendLecturerInvite()">Add Lecturer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN LECTURER TO UNIT MODAL -->
+<div class="modal-overlay" id="assign-lecturer-modal">
+  <div class="modal">
+    <h3>Assign Course Units</h3>
+    <p id="assign-lecturer-modal-desc">Select which course units this lecturer teaches.</p>
+    <div class="form-group" style="margin-top:16px;">
+      <label>Course Units <span style="color:var(--muted);font-size:0.7rem;text-transform:none;letter-spacing:0;">(hold Ctrl/Cmd to select multiple)</span></label>
+      <select id="assign-lecturer-unit-select" multiple style="height:140px;width:100%;margin-top:6px;">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+    <div class="invite-error" id="assign-lecturer-error"></div>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn-cancel" onclick="closeAssignLecturerModal()">Cancel</button>
+      <button class="btn-send-invite" id="confirm-assign-lecturer-btn" onclick="confirmAssignLecturer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMOVE LECTURER CONFIRM MODAL -->
+<div class="modal-overlay" id="remove-lecturer-modal">
+  <div class="modal">
+    <h3>Remove Lecturer</h3>
+    <p id="remove-lecturer-modal-msg">Are you sure? This lecturer will lose access immediately.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeRemoveLecturerModal()">Cancel</button>
+      <button class="btn-confirm-delete" onclick="confirmRemoveLecturer()">Remove</button>
+    </div>
+  </div>
+</div>
+
 <!-- GENERATE API KEY MODAL -->
+<!-- INVITE DEPT ADMIN MODAL -->
+<div class="modal-overlay" id="invite-deptadmin-modal">
+  <div class="modal">
+    <h3>Invite Department Admin</h3>
+    <p>They'll receive an email to set their password and manage their department.</p>
+    <div class="invite-form">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="invite-deptadmin-name" placeholder="e.g. Dr. Sarah Nakato" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="invite-deptadmin-email" placeholder="admin@university.edu" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Assign to Department <span style="color:var(--muted);font-size:0.7rem;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <select id="invite-deptadmin-dept">
+          <option value="">— Select a department —</option>
+        </select>
+      </div>
+      <div class="invite-error" id="invite-deptadmin-error"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn-cancel" onclick="closeInviteDeptAdminModal()">Cancel</button>
+      <button class="btn-send-invite" id="send-deptadmin-invite-btn" onclick="sendDeptAdminInvite()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMOVE DEPT ADMIN CONFIRM MODAL -->
+<div class="modal-overlay" id="remove-deptadmin-modal">
+  <div class="modal">
+    <h3>Remove Department Admin</h3>
+    <p id="remove-deptadmin-modal-msg">Are you sure? This admin will lose access immediately.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeRemoveDeptAdminModal()">Cancel</button>
+      <button class="btn-confirm-delete" onclick="confirmRemoveDeptAdmin()">Remove</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay" id="genkey-modal">
   <div class="modal">
     <h3>Generate API Key</h3>
@@ -157,6 +253,19 @@
   </div>
 </div>
 
+<!-- SESSION DETAILS MODAL -->
+<div class="modal-overlay" id="session-details-modal">
+  <div class="modal" style="max-width:900px;">
+    <h3 id="session-modal-title">Session Details</h3>
+    <div id="session-modal-content">
+      <div class="loading"><div class="spinner"></div>Loading session details...</div>
+    </div>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn-cancel" onclick="closeSessionDetailsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- DASHBOARD -->
 <div id="dashboard-screen">
   <nav>
@@ -178,6 +287,7 @@
       <button class="tab-btn active" id="tab-btn-attendance" onclick="switchTab('attendance')">Attendance Records</button>
       <button class="tab-btn" id="tab-btn-students" onclick="switchTab('students')">Students</button>
       <button class="tab-btn" id="tab-btn-aisummary" onclick="switchTab('aisummary')">AI Summary</button>
+      <button class="tab-btn" id="tab-btn-lecturers" onclick="switchTab('lecturers')">Lecturers</button>
     </div>
 
     <!-- Attendance Tab -->
@@ -215,6 +325,15 @@
       <div class="ai-summary-controls">
         <h3>🤖 Generate AI Attendance Summary</h3>
         <div class="ai-controls-row">
+
+          <!-- FIX 1: Institution picker for super admins (hidden by default, shown via JS) -->
+          <div class="form-group" id="ai-institution-wrap" style="display:none;">
+            <label>Institution</label>
+            <select id="ai-filter-institution">
+              <option value="">— Select institution —</option>
+            </select>
+          </div>
+
           <div class="form-group">
             <label>Scope</label>
             <select id="ai-scope">
@@ -290,7 +409,58 @@
       </div>
     </div>
 
+    <!-- Lecturers Tab -->
+<div class="tab-panel" id="tab-lecturers">
+  <div class="filters">
+    <button class="btn-refresh" onclick="loadLecturers()">↺ Refresh</button>
+    <button class="btn-invite" onclick="openInviteLecturerModal()">+ Invite Lecturer</button>
+  </div>
+  <div class="table-wrap" id="lecturers-table-wrap">
+    <div class="loading"><div class="spinner"></div>Loading lecturers...</div>
+  </div>
+</div>
+
+    <!-- Sessions Tab -->
+<div class="tab-panel" id="tab-sessions">
+  <div class="filters">
+    <button class="btn-refresh" onclick="loadSessions()">↺ Refresh</button>
+  </div>
+  <div class="table-wrap" id="sessions-table-wrap">
+    <div class="loading"><div class="spinner"></div>Loading sessions...</div>
+  </div>
+</div>
+
     <!-- API Keys Tab -->
+<!-- Departments Tab -->
+<div class="tab-panel" id="tab-departments">
+  <div class="units-create-box">
+    <h3>🏛️ Add Department</h3>
+    <div class="units-create-row">
+      <div class="form-group">
+        <label>Department Name</label>
+        <input type="text" id="dept-name-input" placeholder="e.g. Faculty of Engineering" maxlength="80" autocomplete="off"/>
+      </div>
+      <button class="btn-add-unit" id="add-dept-btn" onclick="createDepartment()">+ Add Department</button>
+    </div>
+    <div class="units-create-error" id="dept-create-error"></div>
+  </div>
+  <div class="table-wrap" id="departments-table-wrap">
+    <div class="loading"><div class="spinner"></div>Loading departments...</div>
+  </div>
+</div>
+
+<!-- Dept Admins Tab -->
+<div class="tab-panel" id="tab-deptadmins">
+  <div class="filters">
+    <button class="btn-refresh" onclick="loadDeptAdmins()">↺ Refresh</button>
+    <button class="btn-invite" onclick="openInviteDeptAdminModal()">+ Invite Dept Admin</button>
+  </div>
+  <div class="table-wrap" id="deptadmins-table-wrap">
+    <div class="loading"><div class="spinner"></div>Loading department admins...</div>
+  </div>
+</div>
+
+
     <div class="tab-panel" id="tab-apikeys">
       <div class="apikeys-header">
         <div class="apikeys-header-text">
@@ -316,6 +486,12 @@
     <div class="tab-panel" id="tab-billing">
       <div id="billing-wrap">
         <div class="loading"><div class="spinner"></div>Loading billing info...</div>
+      </div>
+    </div>
+    <!-- Analytics Tab -->
+    <div class="tab-panel" id="tab-analytics">
+      <div id="analytics-wrap">
+        <div class="loading"><div class="spinner"></div>Loading analytics...</div>
       </div>
     </div>
 
@@ -387,7 +563,7 @@
   </div><!-- /main -->
 </div><!-- /dashboard-screen -->
 
-<script src="/static/supabase.min.js"></script>
-<script src="/static/dashboard.js?v=2"></script>
+<script src="/static/js/supabase.min.js"></script>
+<script src="/static/js/dashboard.js"></script>
 </body>
 </html>

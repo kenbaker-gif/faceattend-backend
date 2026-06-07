@@ -1,0 +1,263 @@
+/* Billing Dashboard Styles */
+
+.billing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.plan-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 24px;
+    margin: 16px 0;
+    transition: all 0.3s;
+}
+
+.plan-card.current {
+    border-color: #4CAF50;
+    background: #f1f8f4;
+}
+
+.plan-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.plan-name {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.plan-price {
+    font-size: 32px;
+    color: #333;
+}
+
+.plan-price .currency {
+    font-size: 18px;
+    color: #666;
+}
+
+.plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+}
+
+.plan-features li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.plan-features li:before {
+    content: "✓ ";
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.usage-meter {
+    margin: 24px 0;
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.usage-bar {
+    height: 24px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.usage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+    transition: width 0.3s;
+}
+
+.usage-fill.warning {
+    background: linear-gradient(90deg, #FF9800, #FFB74D);
+}
+
+.usage-fill.danger {
+    background: linear-gradient(90deg, #F44336, #E57373);
+}
+
+.expiry-banner {
+    padding: 16px;
+    border-radius: 4px;
+    margin: 16px 0;
+    font-weight: 500;
+}
+
+.expiry-banner.warning {
+    background: #FFF3E0;
+    border-left: 4px solid #FF9800;
+    color: #E65100;
+}
+
+.expiry-banner.danger {
+    background: #FFEBEE;
+    border-left: 4px solid #F44336;
+    color: #C62828;
+}
+
+.expiry-banner.grace {
+    background: #E3F2FD;
+    border-left: 4px solid #2196F3;
+    color: #0D47A1;
+}
+
+.btn-upgrade {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-upgrade:hover {
+    background: #45a049;
+}
+
+.btn-downgrade {
+    background: #FF9800;
+    color: white;
+}
+
+.btn-downgrade:hover {
+    background: #F57C00;
+}
+
+.proration-preview {
+    background: #E3F2FD;
+    border: 1px solid #2196F3;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.proration-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+.proration-line.total {
+    border-top: 2px solid #2196F3;
+    font-weight: bold;
+    font-size: 18px;
+    margin-top: 8px;
+    padding-top: 12px;
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+.invoice-table th,
+.invoice-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.invoice-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+}
+
+.invoice-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.invoice-status.pending {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+.invoice-status.paid {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.invoice-status.overdue {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 16px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.btn-cancel {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.btn-cancel:hover {
+    background: #d0d0d0;
+}
+
+.download-btn {
+    color: #4CAF50;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.download-btn:hover {
+    background: #f0f0f0;
+}

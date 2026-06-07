@@ -3,6 +3,7 @@ import os
 import uuid
 import hmac
 import hashlib
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from app.dep import supabase, supabase_admin
@@ -215,10 +216,15 @@ async def ipn_handler(request: Request):
     plan           = order["plan"]
 
     try:
+        # Calculate subscription expiry (30 days from now)
+        expiry = datetime.now() + timedelta(days=30)
+        
         supabase_admin.table("institutions").update({
-            "plans": plan
+            "plans": plan,
+            "subscription_expires_at": expiry.isoformat(),
+            "last_payment_date": datetime.now().isoformat()
         }).eq("id", institution_id).execute()
-        print(f"✅ Institution {institution_id} upgraded to {plan}")
+        print(f"✅ Institution {institution_id} upgraded to {plan} (expires {expiry.date()})")
 
         supabase_admin.table("pesapal_orders").delete().eq("order_id", merchant_reference).execute()
 

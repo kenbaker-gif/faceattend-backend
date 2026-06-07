@@ -125,9 +125,10 @@ async def register_institution(
     try:
         supabase_admin.table("profiles").insert({
             "id": user_id,
+            "full_name": admin_full_name.strip(),
             "is_admin": True,
             "institution_id": inst_id,
-            "role": "admin",
+            "role": "central_admin",
         }).execute()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Profile creation failed: {str(e)}")
@@ -212,7 +213,7 @@ async def list_institutions(
 def check_trial(institution_id: str):
     try:
         resp = supabase_admin.table("institutions") \
-            .select("plans, is_active, trial_ends_at, name, status") \
+            .select("plans, is_active, trial_ends_at, subscription_expires_at, name, status") \
             .eq("id", institution_id) \
             .limit(1).execute()
         if not resp.data:
@@ -226,14 +227,21 @@ def check_trial(institution_id: str):
             return {"active": False, "reason": "Account suspended."}
 
         trial_ends = inst.get("trial_ends_at")
+        subscription_expires = inst.get("subscription_expires_at")
         is_active = inst.get("is_active", False)
         plans = inst.get("plans", "trial")
 
         if not is_active:
             return {"active": False, "reason": "Account suspended."}
 
-        # Paid plan — always active regardless of trial_ends_at
+        # Paid plan — check subscription expiry
         if plans in PAID_PLANS:
+            if subscription_expires:
+                expiry = datetime.fromisoformat(subscription_expires.replace("Z", "+00:00"))
+                if expiry < datetime.now(timezone.utc):
+                    return {"active": False, "reason": "Subscription expired. Please renew.", "plans": plans}
+                days_left = (expiry - datetime.now(timezone.utc)).days
+                return {"active": True, "plans": plans, "days_left": days_left}
             return {"active": True, "plans": plans}
 
         # Trial plan — check expiry

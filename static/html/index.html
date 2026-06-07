@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FaceAttend — AI Face Recognition Attendance for Universities</title>
+  <title>FaceAttend — AI Face Verification Attendance for Universities</title>
   <meta name="description" content="Replace paper registers with instant face recognition. Students verified in under a second. Real-time reports for lecturers. Built for African universities."/>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>"/>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/static/styles.css"/>
+  <link rel="stylesheet" href="/static/css/styles.css"/>
 </head>
 <body>
 <div class="grid-bg"></div>
@@ -31,7 +31,7 @@
 <section class="hero">
   <div class="hero-badge">
     <span class="hero-badge__dot"></span>
-    AI-Powered · Face Recognition · Built for Africa
+    AI-Powered · Face Verification · Instant Attendance · Built for Africa
   </div>
   <h1>Take attendance<br>in <span class="accent">seconds</span>,<br>not <span class="accent-orange">hours</span>.</h1>
   <p class="hero-sub">
@@ -73,7 +73,7 @@
       <div class="step-num">01</div>
       <div class="step-icon">🏛️</div>
       <div class="step-title">Register Your Institution</div>
-      <div class="step-desc">Sign up on this page. Your institution account is created instantly with a 30-day free trial — no credit card required.</div>
+      <div class="step-desc">Sign up on this page as the Central Administrator. Create departments, invite department admins, and get full visibility across your institution — all from one dashboard.</div>
     </div>
     <div class="step-card">
       <div class="step-num">02</div>
@@ -224,7 +224,7 @@
     <div class="signup-header">
       <div class="section-label">Get Started</div>
       <h2>Register your university</h2>
-      <p>Start your 30-day free trial. No credit card required. Full access from day one.</p>
+      <p>Start your 30-day free trial. No credit card required. The person registering becomes the <strong style="color:var(--cyan)">Central Administrator</strong> — responsible for setting up departments and inviting department admins.</p>
     </div>
     <div class="signup-card">
       <form id="signup-form">
@@ -233,7 +233,7 @@
           <input type="text" id="university_name" name="university_name" placeholder="e.g. Kampala International University" required/>
         </div>
         <div class="form-group">
-          <label for="admin_full_name">Admin Full Name</label>
+          <label for="admin_full_name">Central Administrator Full Name</label>
           <input type="text" id="admin_full_name" name="admin_full_name" placeholder="e.g. Dr. John Mukasa" required/>
         </div>
         <div class="form-row">
@@ -247,7 +247,7 @@
           </div>
         </div>
         <div class="trial-note">
-          🎉 30-day free trial · Full access · No credit card needed
+          🎉 30-day free trial · Full access · No credit card needed · You register as Central Admin
         </div>
         <button type="submit" class="btn-submit" id="submit-btn">
           Create Institution Account
@@ -267,7 +267,7 @@
   <div class="footer-center">
     <div class="logo" style="font-size:1rem;margin-bottom:6px;">Face<span style="color:var(--cyan)">Attend</span></div>
     <div>Attendance in Seconds, Not Hours</div>
-    <div style="margin-top:4px;font-size:0.75rem;">Built for African universities · Powered by InsightFace AI</div>
+    <div style="margin-top:4px;font-size:0.75rem;">Built for Universities · Powered by InsightFace AI</div>
     <div style="margin-top:10px;">
       <a href="/privacy" style="color:var(--muted);font-size:0.78rem;">Privacy</a>
       &nbsp;·&nbsp;
@@ -286,6 +286,6 @@
   </div>
 </footer>
 
-<script src="/static/main.js"></script>
+<script src="/static/js/main.js"></script>
 </body>
 </html>

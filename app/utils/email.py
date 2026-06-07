@@ -80,6 +80,10 @@ async def _send_email(to: list[str], subject: str, html_body: str) -> None:
         raise
 
 
+async def send_generic_email(to: list[str], subject: str, html_body: str) -> None:
+    await _send_email(to, subject, html_body)
+
+
 # ---------------------------------------------------------------------------
 # HTML template helpers
 # ---------------------------------------------------------------------------
@@ -313,4 +317,52 @@ async def send_digest(
         recipients,
         f"[FaceAttend] Daily Audit Digest — {date_label}",
         _base_template(f"Daily Audit Digest: {institution_name}", content, "#6366F1"),
+    )
+
+
+async def send_subscription_reminder(email: str, institution_name: str, plan: str, days_left: int) -> None:
+    """Send subscription expiry reminder email."""
+    if days_left <= 0:
+        subject = f"[FaceAttend] Your {plan.title()} subscription has expired"
+        message = f"""
+        <p style="color:#DC2626;font-size:15px;margin:0 0 20px;font-weight:600;">
+          Your {plan.title()} subscription for {institution_name} has expired.
+        </p>
+        <p style="color:#374151;font-size:14px;margin:0 0 16px;">
+          To continue using FaceAttend, please renew your subscription immediately.
+        </p>
+        """
+    else:
+        subject = f"[FaceAttend] Your subscription expires in {days_left} day{'s' if days_left != 1 else ''}"
+        message = f"""
+        <p style="color:#F59E0B;font-size:15px;margin:0 0 20px;font-weight:600;">
+          Your {plan.title()} subscription for {institution_name} will expire in {days_left} day{'s' if days_left != 1 else ''}.
+        </p>
+        <p style="color:#374151;font-size:14px;margin:0 0 16px;">
+          Don't lose access to your attendance data. Renew now to continue using FaceAttend without interruption.
+        </p>
+        """
+    
+    content = f"""
+    {message}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr>
+        <td align="center">
+          <a href="https://faceattend.app/dashboard" 
+             style="display:inline-block;background:#6366F1;color:#fff;padding:12px 32px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">
+            Renew Subscription
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="color:#6B7280;font-size:13px;margin:16px 0 0;">
+      Need help? Contact us at <a href="mailto:support@faceattend.app" style="color:#6366F1;">support@faceattend.app</a>
+    </p>
+    """
+    
+    color = "#DC2626" if days_left <= 0 else "#F59E0B"
+    await _send_email(
+        [email],
+        subject,
+        _base_template("Subscription Renewal Required", content, color),
     )
