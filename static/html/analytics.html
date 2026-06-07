@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - FaceAttend</title>
+    <link rel="stylesheet" href="/static/css/analytics.css">
+</head>
+<body>
+    <div class="analytics-container">
+        <div class="analytics-header">
+            <h1>📊 Analytics Dashboard</h1>
+            <p>Business metrics and insights</p>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>Monthly Recurring Revenue</h3>
+                <div class="metric-value" id="mrr-value">KES 0</div>
+                <div class="metric-label">MRR</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Annual Recurring Revenue</h3>
+                <div class="metric-value" id="arr-value">KES 0</div>
+                <div class="metric-label">ARR</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Total Institutions</h3>
+                <div class="metric-value" id="total-institutions">0</div>
+                <div class="metric-label">Active customers</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Churn Rate</h3>
+                <div class="metric-value" id="churn-rate">0%</div>
+                <div class="metric-label" id="churned-count">Last 30 days</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Payment Success</h3>
+                <div class="metric-value" id="payment-success">0%</div>
+                <div class="metric-label" id="payment-stats">Last 30 days</div>
+            </div>
+        </div>
+
+        <!-- Plan Breakdown -->
+        <div class="chart-section">
+            <h2>Plan Distribution</h2>
+            <div class="plan-breakdown" id="plan-breakdown">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Usage Trends -->
+        <div class="chart-section">
+            <h2>Student Usage by Institution</h2>
+            <div class="period-selector">
+                <button class="period-btn active" data-period="30" onclick="analytics.setPeriod(30)">30 Days</button>
+                <button class="period-btn" data-period="60" onclick="analytics.setPeriod(60)">60 Days</button>
+                <button class="period-btn" data-period="90" onclick="analytics.setPeriod(90)">90 Days</button>
+            </div>
+            <div id="usage-trends">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div style="margin-top: 32px; text-align: center;">
+            <a href="/dashboard" style="color: #4CAF50; text-decoration: none;">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script src="/static/js/analytics.js"></script>
+</body>
+</html>

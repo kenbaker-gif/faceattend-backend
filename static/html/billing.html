@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing & Subscription - FaceAttend</title>
+    <link rel="stylesheet" href="/static/css/billing.css">
+    <link rel="icon" href="/static/admin_favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="billing-container">
+        <header style="margin-bottom: 32px;">
+            <h1>Billing & Subscription</h1>
+            <p style="color: #666;">Manage your subscription plan and billing details</p>
+        </header>
+
+        <!-- Expiry Warning Banner -->
+        <div id="expiry-container"></div>
+
+        <!-- Current Usage -->
+        <div id="usage-container"></div>
+
+        <!-- Auto-Renewal Toggle -->
+        <div id="auto-renewal-container"></div>
+
+        <!-- Available Plans -->
+        <section style="margin: 32px 0;">
+            <h2>Available Plans</h2>
+            <div id="plans-container"></div>
+        </section>
+
+        <!-- Invoice History -->
+        <section style="margin: 32px 0;">
+            <div id="invoices-container"></div>
+        </section>
+
+        <!-- Payment History Link -->
+        <section style="margin: 32px 0; text-align: center;">
+            <a href="/dashboard" style="color: #2196F3;">← Back to Dashboard</a>
+        </section>
+    </div>
+
+    <script src="/static/js/billing.js"></script>
+</body>
+</html>

@@ -1,23 +1,40 @@
+# Environment and secrets
+.env
+venv
+
+# Python
+**/__pycache__/
+**/*.pyc
+
+# Data and media
 data/processed/
 data/raw_faces/
 *.jpg
 *.png
 *.jpeg
+
+# Logs and debug
+logs
 debug
 debug2
-*.test.py
-.env
-logs
-**/__pycache__/
-**/*.pyc
+
+# Tests
+tests/
+
+# Documentation (internal)
+docs/
+
+# Development tools
+q/
+q.zip
+.bob/
+notebooks/
+scripts/
+
+# IDE and editor
+.cursor/
 .DS_Store
 Thumbs.db
+
+# Excluded modules
 app/Enterprise
-
-# Local Cursor preferences
-.cursor/rules/
-.cursorignore
-
-venv
-
-tests

@@ -25,6 +25,37 @@ BUCKET = "raw_faces"
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "application/octet-stream"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
+# Student limits per plan
+PLAN_LIMITS = {
+    "trial": 50,
+    "starter": 500,
+    "growth": 2000,
+    "pro": 5000,
+    "enterprise": 999999
+}
+
+def check_student_limit(institution_id: str):
+    """Check if institution has reached student limit for their plan."""
+    count_result = supabase_admin.table("students")\
+        .select("id", count="exact")\
+        .eq("institution_id", institution_id)\
+        .execute()
+    
+    inst_result = supabase_admin.table("institutions")\
+        .select("plans")\
+        .eq("id", institution_id)\
+        .single()\
+        .execute()
+    
+    plan = inst_result.data.get("plans", "trial")
+    limit = PLAN_LIMITS.get(plan, 50)
+    
+    if count_result.count >= limit:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Student limit reached ({limit} students). Please upgrade your plan to add more students."
+        )
+
 
 @router.post("/upload-student-face")
 async def upload_student(
@@ -65,6 +96,9 @@ async def upload_student(
         effective_institution_id = user_institution_id
     else:
         effective_institution_id = institution_id.strip()
+
+    # Check student limit before uploading
+    check_student_limit(effective_institution_id)
 
     file_path = f"{effective_institution_id}/{student_id.strip()}/{file.filename}"
 
