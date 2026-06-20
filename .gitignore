@@ -13,6 +13,9 @@ data/raw_faces/
 *.png
 *.jpeg
 
+# Database backups
+*.sql
+
 # Logs and debug
 logs
 debug
