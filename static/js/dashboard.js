@@ -1856,6 +1856,13 @@ async function confirmAssignLecturer() {
   const errEl = document.getElementById('assign-lecturer-error');
   const btn   = document.getElementById('confirm-assign-lecturer-btn');
   errEl.style.display = 'none';
+
+  if (selectedUnitIds.length === 0) {
+    errEl.textContent = 'Please select at least one course unit.';
+    errEl.style.display = 'block';
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Saving...';
 
@@ -1870,21 +1877,56 @@ async function confirmAssignLecturer() {
 
     if (delError) throw delError;
 
-    // 2. Insert new assignments
-    if (selectedUnitIds.length > 0) {
-      const rows = selectedUnitIds.map(unitId => ({
-        lecturer_id:     lecturerId,
-        course_unit_id:  unitId,
-        institution_id:  currentInstitutionId,
-      }));
-      const { error: insError } = await client
-        .from('lecturer_courses')
-        .insert(rows);
-      if (insError) throw insError;
+    // 2. Assign each selected course unit via backend API
+    const results = [];
+    for (const unitId of selectedUnitIds) {
+      const unitName = Array.from(select.options)
+        .find(o => o.value === unitId)?.text || unitId;
+
+      try {
+        const formData = new FormData();
+        formData.append('lecturer_id', lecturerId);
+        formData.append('course_unit_id', unitId);
+        if (currentInstitutionId) {
+          formData.append('institution_id', currentInstitutionId);
+        }
+
+        const resp = await fetch(`${DAZZLING_URL}/admin/lecturer-courses`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${currentToken}` },
+          body: formData,
+        });
+
+        const result = await resp.json();
+        if (resp.ok) {
+          results.push({ unit: unitName, success: true });
+        } else {
+          results.push({ unit: unitName, success: false, error: result.detail || 'Unknown error' });
+        }
+      } catch (e) {
+        results.push({ unit: unitName, success: false, error: e.message });
+      }
     }
 
-    closeAssignLecturerModal();
-    showToast('✓ Course units updated', 'success');
+    // 3. Show detailed feedback
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
+
+    if (failedCount === 0) {
+      closeAssignLecturerModal();
+      showToast(`✓ ${successCount} course unit${successCount !== 1 ? 's' : ''} assigned successfully`, 'success');
+    } else {
+      const failedUnits = results.filter(r => !r.success).map(r => r.unit).join(', ');
+      errEl.innerHTML = `<strong>Partial success:</strong> ${successCount} assigned, ${failedCount} failed.<br>Failed units: ${escapeHtml(failedUnits)}`;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Save';
+      
+      if (successCount > 0) {
+        showToast(`⚠ ${successCount} assigned, ${failedCount} failed`, 'error');
+      }
+    }
+
     await loadLecturers();
   } catch (e) {
     errEl.textContent = `Failed: ${e.message}`;

@@ -52,7 +52,7 @@ async def lifespan(app):
 load_dotenv()
 
 app = FastAPI(
-    title="Smart Attendance — Upload Service",
+    title="FaceAttend API",
     lifespan=lifespan
 )
 

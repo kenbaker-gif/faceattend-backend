@@ -90,6 +90,61 @@ class LogLoginRequest(BaseModel):
     class Config:
         extra = "allow"  # ← ignore unknown fields
 
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+
+class GooglePreflightRequest(BaseModel):
+    id_token: str
+
+@router.post("/auth/google-preflight")
+@limiter.limit("10/minute")
+async def google_preflight(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid JSON body")
+
+    body = GooglePreflightRequest(**payload)
+
+    # Decode and verify the Google idToken
+    try:
+        GOOGLE_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
+        id_info = google_id_token.verify_oauth2_token(
+            body.id_token,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID,
+        )
+        email = id_info.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="Could not extract email from token")
+    except ValueError as e:
+        logger.error("[google-preflight] Token verification failed: %s", e)
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    # Check if email exists in profiles
+    try:
+        result = supabase_admin.table("profiles") \
+            .select("id, role, institution_id") \
+            .eq("email", email) \
+            .limit(1) \
+            .execute()
+    except Exception as e:
+        logger.error("[google-preflight] DB lookup failed: %s", e)
+        raise HTTPException(status_code=500, detail="Server error")
+
+    if not result.data:
+        logger.warning("[google-preflight] No profile for email: %s", email)
+        return {"allow": False, "reason": "No account found. Contact your institution admin."}
+
+    role = result.data[0].get("role")
+    flutter_allowed = ["central_admin", "dept_admin", "coordinator", "admin"]
+
+    if role not in flutter_allowed:
+        logger.warning("[google-preflight] Role %s not allowed in app", role)
+        return {"allow": False, "reason": "Lecturers access FaceAttend at faceattend.app/dashboard"}
+
+    return {"allow": True}
+
 
 # ---------------------------------------------------------------------------
 # POST /auth/forgot-password  (public — no JWT required)
@@ -113,6 +168,7 @@ async def forgot_password(request: Request):
         )
     except Exception as exc:
         logger.error("[forgot-password] Supabase error: %s", exc)
+        return {"message": "If that email is registered, a reset link has been sent."}
 
     await log_event(
         AuditAction.AUTH_PASSWORD_RESET,
