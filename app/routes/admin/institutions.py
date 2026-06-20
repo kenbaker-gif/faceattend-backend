@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from app.dep import supabase_admin, check_admin, check_super_admin, _bool_flag
+from app.dep import supabase_admin, check_admin, check_super_admin, verify_supabase_token, _bool_flag
 
 router = APIRouter(tags=["admin-institutions"])
 
@@ -210,7 +210,7 @@ async def list_institutions(
 
 
 @router.get("/check-trial/{institution_id}")
-def check_trial(institution_id: str):
+def check_trial(institution_id: str, user=Depends(verify_supabase_token)):
     try:
         resp = supabase_admin.table("institutions") \
             .select("plans, is_active, trial_ends_at, subscription_expires_at, name, status") \

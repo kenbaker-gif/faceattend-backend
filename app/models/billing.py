@@ -7,7 +7,7 @@ from datetime import datetime
 class PlanUpgradeRequest(BaseModel):
     """Request to upgrade/downgrade subscription plan."""
     institution_id: str = Field(..., description="Institution UUID")
-    new_plan: Literal["free", "premium", "enterprise"] = Field(..., description="Target plan")
+    new_plan: Literal["starter", "growth", "pro", "enterprise"] = Field(..., description="Target plan")
     payment_method: Optional[str] = Field(None, description="Payment method for upgrades")
 
 
@@ -40,7 +40,7 @@ class Invoice(BaseModel):
     institution_id: str
     plan: str
     amount: float
-    currency: str = "KES"
+    currency: str = "UGX"
     issue_date: datetime
     due_date: datetime
     status: Literal["pending", "paid", "overdue", "cancelled"]
