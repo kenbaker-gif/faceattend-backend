@@ -1,0 +1,15 @@
+{"id":"adbd157e-e834-4ab7-89ac-f4f19cac0afd","ts":"2026-06-07T10:02:28.074Z","path":"/root/faceattend-backend/app/routes/admin/institutions.py","version":"1.0.0","taskID":"ddb15b82-40fe-4122-994b-54771032690c"}
+{"id":"952dc1e0-e4d4-46a4-a1b8-cd581d0abbd0","ts":"2026-06-07T10:02:32.188Z","path":"/root/faceattend-backend/app/routes/admin/institutions.py","version":"1.0.0","taskID":"ddb15b82-40fe-4122-994b-54771032690c"}
+{"id":"b09cefb6-cd89-4915-9d4c-285a817d4ffd","ts":"2026-06-07T11:54:30.758Z","path":"/root/faceattend-backend/app/models/billing.py","version":"1.0.0","taskID":"5f009d02-e662-4ccd-a04a-aed6dae19bc2"}
+{"id":"6b788aee-dab8-4d32-8280-f5d4bc48ebad","ts":"2026-06-07T12:30:14.627Z","path":"/root/faceattend-backend/static/js/dashboard.js","version":"1.0.0","taskID":"c031785d-7c84-4218-98a9-cb25552b80f1"}
+{"id":"80112846-ef89-402c-9233-beca62b494af","ts":"2026-06-11T05:42:05.683Z","path":"/root/faceattend-backend/static/html/set-password.html","version":"1.0.0","taskID":"2f7826c6-a57f-4021-97ae-6f7d812a644a"}
+{"id":"38a7d16b-ec8c-4e5a-8fcf-009115a7e3cd","ts":"2026-06-11T06:16:39.060Z","path":"/root/faceattend-backend/static/html/set-password.html","version":"1.0.0","taskID":"2f7826c6-a57f-4021-97ae-6f7d812a644a"}
+{"id":"34363181-4b2e-46c6-b489-26551e89f9aa","ts":"2026-06-11T06:16:52.150Z","path":"/root/faceattend-backend/static/html/set-password.html","version":"1.0.0","taskID":"2f7826c6-a57f-4021-97ae-6f7d812a644a"}
+{"id":"0d6489bb-8ec6-4232-bfd4-7f13a9eebc14","ts":"2026-06-19T06:28:16.022Z","path":"/root/faceattend-backend/static/html/reset-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"8d42faf5-46d5-4f70-b425-7d484b9461b0","ts":"2026-06-19T06:28:26.375Z","path":"/root/faceattend-backend/static/html/forgot-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"5d0ec2f3-d50d-4109-9714-7c7482200b33","ts":"2026-06-19T06:28:37.451Z","path":"/root/faceattend-backend/static/html/forgot-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"863af199-ce13-4acc-929f-1864d75e039a","ts":"2026-06-19T06:28:54.300Z","path":"/root/faceattend-backend/static/html/set-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"b24d4464-ced0-4c78-94ae-ece3de9a68c5","ts":"2026-06-19T06:29:08.537Z","path":"/root/faceattend-backend/app/routes/auth.py","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"f948ca37-bdb2-46db-b8f4-72bcafaf9a30","ts":"2026-06-19T06:39:03.082Z","path":"/root/faceattend-backend/static/html/reset-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"59aa3e67-b675-4396-b6ea-3d99571a2ac7","ts":"2026-06-19T06:39:16.625Z","path":"/root/faceattend-backend/static/html/forgot-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
+{"id":"d4d3bc75-f20e-4c46-9c3e-a29a3a3a0f43","ts":"2026-06-19T06:39:32.738Z","path":"/root/faceattend-backend/static/html/set-password.html","version":"1.0.0","taskID":"03e39b1b-e9e8-42e3-b18a-529a71fd4b63"}
