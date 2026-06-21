@@ -1,0 +1,6 @@
+{"id":"5cbc7db6-814a-4c6f-8791-17827a90a9a3","ts":"2026-06-20T05:28:15.398Z","path":"/root/faceattend-backend/app/dep.py","version":"1.0.0","taskID":"14443466-2734-4f4c-8bf1-9fb7beb10586"}
+{"id":"c70848e8-a5c8-4fbf-9c1c-cd872a7a20e9","ts":"2026-06-20T05:28:19.996Z","path":"/root/faceattend-backend/app/routes/auth.py","version":"1.0.0","taskID":"14443466-2734-4f4c-8bf1-9fb7beb10586"}
+{"id":"5d3dc7ac-7a92-4bc1-92bb-e0dbb13a2407","ts":"2026-06-20T05:28:24.531Z","path":"/root/faceattend-backend/app/routes/admin/coordinators.py","version":"1.0.0","taskID":"14443466-2734-4f4c-8bf1-9fb7beb10586"}
+{"id":"8e6daaea-46e2-4aaa-a231-4d557565a23a","ts":"2026-06-20T05:31:00.372Z","path":"/root/faceattend-backend/static/js/dashboard.js","version":"1.0.0","taskID":"14443466-2734-4f4c-8bf1-9fb7beb10586"}
+{"id":"346505b6-64b2-4936-bc7f-ced168559eb9","ts":"2026-06-20T05:31:43.055Z","path":"/root/faceattend-backend/static/js/dashboard.js","version":"1.0.0","taskID":"14443466-2734-4f4c-8bf1-9fb7beb10586"}
+{"id":"42f8b2db-b892-4947-8c73-7951ae7f0350","ts":"2026-06-20T05:31:49.029Z","path":"/root/faceattend-backend/static/js/dashboard.js","version":"1.0.0","taskID":"14443466-2734-4f4c-8bf1-9fb7beb10586"}
