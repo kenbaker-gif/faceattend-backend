@@ -78,7 +78,7 @@ async def check_admin(authorization: str = Header(None)):
         is_super_admin = _bool_flag(profile_data.get("is_super_admin"))
         role           = profile_data.get("role", "")
 
-        if not (is_admin or is_super_admin or role in ("admin", "central_admin", "dept_admin", "super_admin")):
+        if not (is_admin or is_super_admin or role in ("dept_admin", "central_admin", "super_admin")):
             raise HTTPException(status_code=403, detail="Admin access required")
 
         institution_id = profile_data.get("institution_id")

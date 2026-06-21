@@ -38,6 +38,7 @@ let aiSummaryData        = null;
 let currentInstitutionId = null;
 let isSuperAdmin         = false;
 let isCentralAdmin       = false;
+let isDeptAdmin          = false;
 let allRecords           = [];
 let allSecurityData      = [];
 let pendingDeleteId      = null;
@@ -398,7 +399,11 @@ async function autoLoginWithToken(accessToken, refreshToken) {
 // ── Page load: check for Supabase recovery hash OR existing session ────────
 window.addEventListener('load', async () => {
   const hash = window.location.hash;
-  if (hash && hash.includes('type=recovery')) {
+  const query = new URLSearchParams(window.location.search);
+  const hasRecoveryLink = (hash && hash.includes('type=recovery'))
+    || query.get('code');
+
+  if (hasRecoveryLink) {
     let recoveryScreenShown = false;
     const showRecoveryScreenOnce = () => {
       if (recoveryScreenShown) return;
@@ -412,21 +417,10 @@ window.addEventListener('load', async () => {
       }
     });
 
-    const { data: sessionData } = await client.auth.getSession();
-    if (sessionData?.session) {
-      showRecoveryScreenOnce();
-    } else {
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token') || '';
-      if (accessToken) {
-        const { data: setData } = await client.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        if (setData?.session) showRecoveryScreenOnce();
-      }
-    }
+    const result = await establishSessionFromUrl(client, {
+      allowedTypes: ['recovery'],
+    });
+    if (result.ok) showRecoveryScreenOnce();
 
     if (recoveryScreenShown) authListener?.subscription?.unsubscribe?.();
     return;
@@ -476,6 +470,14 @@ async function confirmSetNewPassword() {
   btn.disabled = true; btn.textContent = 'Updating…';
 
   try {
+    const { data } = await client.auth.getSession();
+    if (!data?.session) {
+      msg.textContent = 'Session not ready. Please refresh and open the reset link again.';
+      msg.className = 'set-pw-msg error'; msg.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Update Password';
+      return;
+    }
+
     const { error } = await client.auth.updateUser({ password: pw1 });
     if (error) throw error;
 
@@ -579,8 +581,9 @@ async function login() {
   const isAdmin           = profile && (profile.is_admin === true || profile.is_admin === 'true');
   const isSuperAdminCheck = profile && (profile.is_super_admin === true || profile.is_super_admin === 'true');
   const isCentralAdminCheck = profile?.role === 'central_admin';
+  const isDeptAdminCheck = profile?.role === 'dept_admin';
 
-  if (!profile || !(isAdmin || isSuperAdminCheck || isCentralAdminCheck)) {
+  if (!profile || !(isAdmin || isSuperAdminCheck || isCentralAdminCheck || isDeptAdminCheck)) {
     showLoginError("Access denied. Admin account required.");
     await client.auth.signOut();
     Object.keys(localStorage).forEach(key => {
@@ -653,6 +656,7 @@ async function initDashboard(session, isFreshLogin = false) {
     currentInstitutionId = profile?.institution_id || null;
     isSuperAdmin         = profile?.is_super_admin === true;
     isCentralAdmin       = profile?.role === 'central_admin';
+    isDeptAdmin          = profile?.role === 'dept_admin';
 
     if (!isSuperAdmin && currentInstitutionId) {
       const { data: inst } = await client
