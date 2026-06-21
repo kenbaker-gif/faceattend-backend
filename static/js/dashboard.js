@@ -574,7 +574,7 @@ async function login() {
 
   const { data: profile } = await client
     .from('profiles')
-    .select('is_admin, is_super_admin, institution_id')
+    .select('is_admin, is_super_admin, institution_id, role')
     .eq('id', data.user.id)
     .single();
 
