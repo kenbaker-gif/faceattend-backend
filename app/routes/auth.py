@@ -137,7 +137,7 @@ async def google_preflight(request: Request):
         return {"allow": False, "reason": "No account found. Contact your institution admin."}
 
     role = result.data[0].get("role")
-    flutter_allowed = ["central_admin", "dept_admin", "coordinator", "admin"]
+    flutter_allowed = ["central_admin", "dept_admin", "coordinator"]
 
     if role not in flutter_allowed:
         logger.warning("[google-preflight] Role %s not allowed in app", role)

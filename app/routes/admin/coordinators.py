@@ -555,7 +555,7 @@ async def list_dept_admins(
 
     query = supabase_admin.table("profiles") \
         .select("id, full_name, email, created_at, institution_id, department_id, role") \
-        .in_("role", ["admin", "dept_admin"])
+        .in_("role", ["dept_admin"])
 
     if target_institution:
         query = query.eq("institution_id", target_institution)
