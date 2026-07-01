@@ -5,14 +5,6 @@ venv
 # Python
 **/__pycache__/
 **/*.pyc
-*.pyo
-.Python
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.coverage
-htmlcov/
 
 # Data and media
 data/processed/
@@ -21,18 +13,19 @@ data/raw_faces/
 *.png
 *.jpeg
 
+# Database backups
+*.sql
+
 # Logs and debug
-logs/
-*.log
+logs
 debug
 debug2
 
-# IDE and editor
-.cursor/
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+# Tests
+tests/
+
+# Documentation (internal)
+docs/
 
 # Development tools
 q/
@@ -41,9 +34,10 @@ q.zip
 notebooks/
 scripts/
 
+# IDE and editor
+.cursor/
+.DS_Store
+Thumbs.db
+
 # Excluded modules
 app/Enterprise
-
-# Temp files
-verify_pdf.py
-*.tmp
