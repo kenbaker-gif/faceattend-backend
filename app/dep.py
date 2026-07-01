@@ -9,20 +9,35 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 2. Define the constants from the environment
-SUPABASE_URL         = os.getenv("SUPABASE_URL")
-SUPABASE_KEY         = os.getenv("SUPABASE_KEY")          # anon key
-SUPABASE_SERVICE_KEY = os.getenv("SERVICE_KEY")            # service role
+SUPABASE_URL         = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY         = os.getenv("SUPABASE_KEY", "")          # anon key
+SUPABASE_SERVICE_KEY = os.getenv("SERVICE_KEY", "")          # service role
 
-# 3. Check that they exist
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_KEY in environment.")
-if not SUPABASE_SERVICE_KEY:
-    raise RuntimeError("Missing SERVICE_KEY in environment.")
 
-# 4. Initialize the clients (after the variables are defined)
-# This replaces the line you had at the top and fixes the "supabase_admin" import error
-supabase: Client       = create_client(SUPABASE_URL, SUPABASE_KEY)
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+class _MissingSupabaseClient:
+    def __init__(self, reason: str):
+        self._reason = reason
+
+    def __call__(self, *args, **kwargs):
+        raise RuntimeError(self._reason)
+
+    def __getattr__(self, _name):
+        if _name.startswith("__"):
+            raise AttributeError(_name)
+        return self
+
+
+def _build_supabase_client(url: str, key: str, label: str):
+    if not url or not key:
+        return _MissingSupabaseClient(
+            f"{label} is not configured. Set SUPABASE_URL and SUPABASE_KEY/SERVICE_KEY before using Supabase."
+        )
+    return create_client(url, key)
+
+
+# 3. Initialize the clients lazily without crashing imports in local/test environments.
+supabase: Client | object = _build_supabase_client(SUPABASE_URL, SUPABASE_KEY, "Supabase client")
+supabase_admin: Client | object = _build_supabase_client(SUPABASE_URL, SUPABASE_SERVICE_KEY, "Supabase admin client")
 
 # ── Rate limiter ─────────────────────────────────────────────────────────────
 def rate_limit_key(request: Request) -> str:
@@ -37,6 +52,54 @@ def _bool_flag(value) -> bool:
     if isinstance(value, str):
         return value.lower() in ("true", "1", "yes")
     return bool(value)
+
+
+def normalize_role(role) -> str:
+    return str(role or "").strip().lower()
+
+
+def build_admin_context(profile: dict | None) -> dict:
+    profile = profile or {}
+    role = normalize_role(profile.get("role"))
+    is_admin = _bool_flag(profile.get("is_admin"))
+    is_super_admin = _bool_flag(profile.get("is_super_admin"))
+    is_super = is_super_admin or role == "super_admin"
+    is_central_admin = role == "central_admin"
+    is_dept_admin = role in {"dept_admin", "admin"}
+
+    return {
+        "role": role,
+        "is_admin": is_admin or is_super or is_central_admin or is_dept_admin,
+        "is_super_admin": is_super_admin,
+        "is_super": is_super,
+        "is_central_admin": is_central_admin,
+        "is_dept_admin": is_dept_admin,
+        "can_access_dashboard": is_admin or is_super or is_central_admin or is_dept_admin,
+    }
+
+
+def can_access_feature(profile: dict | None, feature: str, institution_plan: str | None = None) -> bool:
+    ctx = build_admin_context(profile)
+    feature_name = (feature or "").lower()
+
+    if feature_name in {"analytics", "security", "institutions", "api_keys"}:
+        if feature_name == "api_keys":
+            return ctx["is_super"] or (ctx["is_dept_admin"] and normalize_role(institution_plan) == "enterprise")
+        return ctx["is_super"]
+
+    if feature_name in {"departments", "dept_admins", "deptadmins"}:
+        return ctx["is_super"] or ctx["is_central_admin"]
+
+    if feature_name == "billing":
+        return ctx["is_super"] or ctx["is_central_admin"] or ctx["is_dept_admin"]
+
+    if feature_name in {"students", "lecturers", "course_units", "sessions", "team", "audit"}:
+        return ctx["is_super"] or ctx["is_dept_admin"]
+
+    if feature_name in {"attendance", "ai_summary"}:
+        return ctx["can_access_dashboard"]
+
+    return ctx["can_access_dashboard"]
 
 # ── Auth dependencies ────────────────────────────────────────────────────────
 
@@ -74,15 +137,12 @@ async def check_admin(authorization: str = Header(None)):
         if not profile_data:
             raise HTTPException(status_code=403, detail="Admin profile not found or incomplete")
 
-        is_admin       = _bool_flag(profile_data.get("is_admin"))
-        is_super_admin = _bool_flag(profile_data.get("is_super_admin"))
-        role           = profile_data.get("role", "")
-
-        if not (is_admin or is_super_admin or role in ("dept_admin", "central_admin", "super_admin")):
+        profile_context = build_admin_context(profile_data)
+        if not profile_context["can_access_dashboard"]:
             raise HTTPException(status_code=403, detail="Admin access required")
 
         institution_id = profile_data.get("institution_id")
-        if institution_id and not (is_super_admin or role == "super_admin"):
+        if institution_id and not profile_context["is_super"]:
             inst_resp = supabase_admin.table("institutions").select("status") \
                 .eq("id", institution_id).limit(1).execute()
             if inst_resp.data:
@@ -114,10 +174,9 @@ async def check_super_admin(authorization: str = Header(None)):
         .select("is_super_admin, role") \
         .eq("id", user_id).limit(1).execute()
     profile_data   = resp.data[0] if resp.data else None
-    is_super_admin = _bool_flag(profile_data.get("is_super_admin") if profile_data else None)
-    role           = profile_data.get("role", "") if profile_data else ""
+    profile_context = build_admin_context(profile_data)
 
-    if not (is_super_admin or role == "super_admin"):
+    if not profile_context["is_super"]:
         raise HTTPException(status_code=403, detail="Super admin access required")
 
     return user

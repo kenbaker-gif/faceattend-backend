@@ -7,7 +7,7 @@ from supabase import Client
 class AnalyticsService:
     """Calculate business metrics and analytics."""
     
-    PLAN_PRICES = {"free": 0, "premium": 3000, "enterprise": 10000}
+    PLAN_PRICES = {"free": 0, "premium": 99, "enterprise": 199}  # USD
     
     @staticmethod
     def calculate_mrr(supabase: Client) -> Dict:

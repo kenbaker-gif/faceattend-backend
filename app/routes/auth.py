@@ -17,7 +17,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
-from app.dep import supabase, supabase_admin, verify_supabase_token, limiter
+from app.dep import supabase, supabase_admin, verify_supabase_token, limiter, build_admin_context, can_access_feature
 from app.utils.audit import AuditAction, log_event
 
 logger = logging.getLogger(__name__)
@@ -185,6 +185,55 @@ async def forgot_password(request: Request):
 # ---------------------------------------------------------------------------
 # POST /auth/log-login  (JWT required — called by Flutter after signIn)
 # ---------------------------------------------------------------------------
+
+@router.get("/auth/me/permissions")
+async def get_my_permissions(current_user = Depends(verify_supabase_token)):
+    profile_resp = supabase_admin.table("profiles") \
+        .select("id, email, institution_id, is_admin, is_super_admin, role") \
+        .eq("id", current_user.id) \
+        .single() \
+        .execute()
+
+    profile = profile_resp.data[0] if profile_resp.data else None
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    institution_id = profile.get("institution_id")
+    institution_plan = "free"
+    if institution_id:
+        inst_resp = supabase_admin.table("institutions") \
+            .select("plan, plans") \
+            .eq("id", institution_id) \
+            .single() \
+            .execute()
+        if inst_resp.data:
+            raw_plan = inst_resp.data[0].get("plan") or inst_resp.data[0].get("plans") or "free"
+            institution_plan = str(raw_plan).lower() if raw_plan else "free"
+
+    ctx = build_admin_context(profile)
+    return {
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "institution_id": institution_id,
+        "role": ctx["role"],
+        "plan": institution_plan,
+        "permissions": {
+            "dashboard": ctx["can_access_dashboard"],
+            "students": can_access_feature(profile, "students"),
+            "lecturers": can_access_feature(profile, "lecturers"),
+            "course_units": can_access_feature(profile, "course_units"),
+            "sessions": can_access_feature(profile, "sessions"),
+            "team": can_access_feature(profile, "team"),
+            "departments": can_access_feature(profile, "departments"),
+            "dept_admins": can_access_feature(profile, "dept_admins"),
+            "billing": can_access_feature(profile, "billing"),
+            "analytics": can_access_feature(profile, "analytics"),
+            "security": can_access_feature(profile, "security"),
+            "audit": can_access_feature(profile, "audit"),
+            "api_keys": can_access_feature(profile, "api_keys", institution_plan),
+        },
+    }
+
 
 @router.post("/auth/log-login")
 @limiter.limit("20/hour")

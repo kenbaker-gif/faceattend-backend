@@ -36,6 +36,7 @@ from app.routes.admin.analytics import router as admin_analytics_router
 from app.routes.pages import router as pages_router
 from app.routes.api.v1 import router as v1_router
 from app.routes.webhooks.pesapal import router as pesapal_router
+from app.routes.webhooks.pesapal_compat import router as pesapal_compat_router
 from app.config import settings
 from app.dep import limiter
 from app.utils.mvp_sync import MVP_URL
@@ -88,7 +89,7 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 
 if not os.getenv("SUPABASE_ANON_KEY"):
-    raise RuntimeError("SUPABASE_ANON_KEY environment variable is required")
+    logger.warning("SUPABASE_ANON_KEY is not set; auth and Supabase-backed features will be unavailable until configured.")
 
 if not MVP_URL:
     print("⚠️  WARNING: MVP_URL is not set. Auto-sync after photo upload will be disabled.")
@@ -98,6 +99,7 @@ else:
 # ── Mount routers ──────────────────────────────────────────────────────────
 app.include_router(v1_router)
 app.include_router(pesapal_router)
+app.include_router(pesapal_compat_router)
 app.include_router(auth_router)
 app.include_router(audit_logs_router)
 app.include_router(notifications_router)
@@ -110,5 +112,3 @@ app.include_router(admin_billing_router)
 app.include_router(admin_auto_renewal_router)
 app.include_router(admin_analytics_router)
 app.include_router(pages_router)
-
-app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -54,22 +54,32 @@ async def upgrade_plan(request: PlanUpgradeRequest, user=Depends(check_admin)):
     payment_required = False
     payment_link = None
 
+    # Map billing plan names to Pesapal plan names
+    PLAN_MAP = {"premium": "growth", "enterprise": "pro"}
+
     if subscription_end:
         sub_end_dt = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
         proration = BillingService.calculate_proration(current_plan, request.new_plan, sub_end_dt)
         if proration.net_amount > 0:
             payment_required = True
-            payment_link = f"/payments/subscribe?plan={request.new_plan}&amount={proration.net_amount}"
 
-    new_subscription_end = datetime.utcnow() + timedelta(days=30)
-    supabase_admin.table("institutions").update({
-        "plan": request.new_plan,
-        "subscription_end": new_subscription_end.isoformat(),
-    }).eq("id", request.institution_id).execute()
+    # Generate Pesapal payment link for paid plans
+    pesapal_plan = PLAN_MAP.get(request.new_plan)
+    if pesapal_plan:
+        payment_required = True
+        payment_link = f"/api/cart/create-cart?plan={pesapal_plan}&institution_id={request.institution_id}"
+
+    # Only update plan immediately for free downgrades (no payment needed)
+    if not payment_required:
+        new_subscription_end = datetime.utcnow() + timedelta(days=30)
+        supabase_admin.table("institutions").update({
+            "plan": request.new_plan,
+            "subscription_end": new_subscription_end.isoformat(),
+        }).eq("id", request.institution_id).execute()
 
     return PlanUpgradeResponse(
         success=True,
-        message=f"Successfully changed from {current_plan} to {request.new_plan}",
+        message="Redirecting to payment..." if payment_required else f"Successfully changed to {request.new_plan}",
         new_plan=request.new_plan,
         effective_date=datetime.utcnow(),
         prorated_amount=proration.net_amount if proration else None,

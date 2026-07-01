@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
 
-from app.dep import limiter, supabase, supabase_admin, check_admin, _bool_flag, require_enterprise
+from app.dep import limiter, supabase, supabase_admin, check_admin, _bool_flag, require_enterprise, build_admin_context, can_access_feature
 
 # ── Router ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +59,28 @@ def _get_org_id(user, requested_org_id: Optional[str] = None) -> Optional[str]:
             detail="Admin account is not linked to an institution.",
         )
     return org_id
+
+
+def _get_profile_for_user(user) -> Optional[dict]:
+    resp = supabase_admin.table("profiles") \
+        .select("institution_id, is_super_admin, role, is_admin") \
+        .eq("id", user.id) \
+        .limit(1).execute()
+    return resp.data[0] if resp.data else None
+
+
+def _get_institution_plan(org_id: Optional[str]) -> str:
+    if not org_id:
+        return "free"
+    resp = supabase_admin.table("institutions") \
+        .select("plan, plans") \
+        .eq("id", org_id) \
+        .limit(1).execute()
+    inst = resp.data[0] if resp.data else None
+    if not inst:
+        return "free"
+    raw_plan = inst.get("plan") or inst.get("plans") or "free"
+    return str(raw_plan).lower() if raw_plan else "free"
 
 
 # ── Dependency: validate X-API-Key header ────────────────────────────────────
@@ -112,6 +134,11 @@ async def validate_api_key(
     return key_row
 
 
+# Backwards-compatible alias used by some tests
+async def verify_api_key(request: Request, x_api_key: Optional[str] = Header(default=None)) -> dict:
+    return await validate_api_key(request, x_api_key)
+
+
 # ── Schemas ──────────────────────────────────────────────────────────────────
 
 class CreateKeyRequest(BaseModel):
@@ -159,6 +186,14 @@ async def create_api_key(
             detail="Super admin must provide ?org_id=<institution_id>.",
         )
 
+    profile = _get_profile_for_user(user)
+    plan = _get_institution_plan(resolved)
+    if not can_access_feature(profile, "api_keys", plan):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key management is not available for your role.",
+        )
+
     require_enterprise(resolved)
 
     raw_key, key_hash = generate_api_key()
@@ -201,6 +236,14 @@ async def list_api_keys(
     """
     resolved = _get_org_id(user, org_id)
 
+    profile = _get_profile_for_user(user)
+    plan = _get_institution_plan(resolved)
+    if not can_access_feature(profile, "api_keys", plan):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key management is not available for your role.",
+        )
+
     if resolved:  # None = super admin with no filter — skip plan check
         require_enterprise(resolved)
 
@@ -228,6 +271,14 @@ async def revoke_api_key(
     Auth: JWT (institution admin).
     """
     resolved = _get_org_id(user)
+
+    profile = _get_profile_for_user(user)
+    plan = _get_institution_plan(resolved)
+    if not can_access_feature(profile, "api_keys", plan):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key management is not available for your role.",
+        )
 
     if resolved:  # None = super admin — skip plan check
         require_enterprise(resolved)
@@ -263,6 +314,57 @@ async def health_check(request: Request, api_key: dict = Depends(validate_api_ke
         "key_name":  api_key["name"],
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/students")
+@limiter.limit("60/minute")
+async def v1_list_students(request: Request, api_key: dict = Depends(verify_api_key)):
+    """Compatibility endpoint: list students for an org (mobile SDK expects /v1/students)."""
+    try:
+        org_id = api_key.get("org_id")
+        query = supabase_admin.table("students").select("*")
+        if org_id:
+            query = query.eq("institution_id", org_id)
+        resp = query.execute()
+        students = resp.data or []
+        return {"students": students}
+    except Exception:
+        return {"students": []}
+
+
+@router.post("/attendance")
+@limiter.limit("120/minute")
+async def v1_mark_attendance(request: Request, api_key: dict = Depends(verify_api_key)):
+    """Compatibility wrapper for mobile app attendance payloads (POST /v1/attendance)."""
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid JSON payload")
+
+    anti_spoof = bool(payload.get("anti_spoof_passed"))
+    confidence = float(payload.get("confidence", 0))
+    if not anti_spoof:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Anti-spoofing check failed.")
+    if confidence < 0.75:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Low confidence score")
+
+    record = {
+        "session_id": payload.get("session_id"),
+        "student_id": payload.get("student_id"),
+        "org_id": api_key.get("org_id"),
+        "confidence_score": confidence,
+        "anti_spoof_passed": anti_spoof,
+        "status": "present",
+    }
+    res = supabase_admin.table("attendance_records").insert(record)
+    try:
+        if hasattr(res, "execute"):
+            res = res.execute()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to record attendance")
+    if not getattr(res, "data", None):
+        raise HTTPException(status_code=500, detail="Failed to record attendance")
+    return {"success": True, "record": res.data[0]}
 
 
 @router.post("/attendance/mark", status_code=status.HTTP_201_CREATED)
