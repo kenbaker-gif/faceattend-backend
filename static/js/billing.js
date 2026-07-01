@@ -27,7 +27,9 @@ class BillingDashboard {
                 name: data.plan || 'free',
                 subscriptionEnd: data.subscription_end,
                 graceStart: data.grace_period_start,
-                graceEnd: data.grace_period_end
+                graceEnd: data.grace_period_end,
+                adminEmail: data.admin_email || '',
+                institutionName: data.name || ''
             };
         } catch (error) {
             console.error('Failed to load plan:', error);
@@ -298,7 +300,29 @@ class BillingDashboard {
             const result = await response.json();
             
             if (result.payment_required && result.payment_link) {
-                window.location.href = result.payment_link;
+                const userEmail = this.currentPlan?.adminEmail;
+                if (!userEmail) {
+                    alert('No admin email found for this institution. Please update your profile.');
+                    return;
+                }
+
+                const cartResp = await fetch('/api/cart/create-cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plan: newPlan === 'premium' ? 'growth' : 'pro',
+                        email: userEmail,
+                        first_name: this.currentPlan?.institutionName || 'Admin',
+                        last_name: '',
+                        institution_id: this.institutionId
+                    })
+                });
+                const cartData = await cartResp.json();
+                if (cartData.redirect_url) {
+                    window.location.href = cartData.redirect_url;
+                } else {
+                    alert('Payment setup failed: ' + JSON.stringify(cartData));
+                }
             } else {
                 alert(`Successfully changed to ${newPlan} plan!`);
                 location.reload();

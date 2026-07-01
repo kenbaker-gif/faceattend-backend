@@ -1,3 +1,4 @@
+cat > /home/claude/faceattend/dashboard.js << 'JSEOF'
 if (typeof supabase === 'undefined') {
   document.getElementById('login-screen').innerHTML = `
     <div class="login-card">
@@ -37,9 +38,6 @@ let currentToken         = null;
 let aiSummaryData        = null;
 let currentInstitutionId = null;
 let isSuperAdmin         = false;
-let isCentralAdmin       = false;
-let isDeptAdmin          = false;
-let currentPermissions   = null;
 let allRecords           = [];
 let allSecurityData      = [];
 let pendingDeleteId      = null;
@@ -87,268 +85,6 @@ function escapeJsString(value) {
     .replace(/\n/g, '\\n');
 }
 
-function normalizeRole(role) {
-  return String(role || '').trim().toLowerCase();
-}
-
-function buildDashboardPermissions(profile = {}, institutionPlan = 'free') {
-  const role = normalizeRole(profile?.role);
-  const isSuper = Boolean(profile?.is_super_admin) || role === 'super_admin';
-  const isCentral = role === 'central_admin';
-  const isDept = role === 'dept_admin' || role === 'admin' || Boolean(profile?.is_admin);
-  const plan = String(institutionPlan || 'free').toLowerCase();
-
-  return {
-    role,
-    isSuper,
-    isCentral,
-    isDept,
-    canAccessDashboard: isSuper || isCentral || isDept,
-    canManageStudents: isSuper || isDept,
-    canManageLecturers: isSuper || isDept,
-    canManageCourseUnits: isSuper || isDept,
-    canManageSessions: isSuper || isDept,
-    canManageTeam: isSuper || isDept,
-    canManageDepartments: isSuper || isCentral,
-    canManageDeptAdmins: isSuper || isCentral,
-    canManageBilling: isSuper || isCentral || isDept,
-    canManageApiKeys: isSuper || (isDept && plan === 'enterprise'),
-    canViewAnalytics: isSuper,
-    canViewSecurity: isSuper,
-    canViewAudit: isSuper || isCentral || isDept,
-    canViewInstitutions: isSuper,
-  };
-}
-
-// ── SESSIONS STATE ────────────────────────────────────────────────────────
-let sessionsData = [];
-let currentSessionId = null;
-
-// ── LOAD SESSIONS ──────────────────────────────────────────────────────────
-
-async function loadSessions() {
-  if (!currentToken) return;
-
-  document.getElementById('sessions-table-wrap').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Loading sessions...</div>';
-
-  try {
-    const instQuery = currentInstitutionId ? `?institution_id=${currentInstitutionId}` : '';
-    const resp = await fetch(`${DAZZLING_URL}/admin/sessions${instQuery}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    sessionsData = data.sessions || [];
-
-    if (!sessionsData.length) {
-      document.getElementById('sessions-table-wrap').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">📅</div>
-          <p>No sessions found.<br>Sessions are created when attendance is taken.</p>
-        </div>`;
-      return;
-    }
-
-    const rows = sessionsData.map(s => {
-      const date = s.started_at
-        ? new Date(s.started_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-        : s.created_at
-        ? new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-        : '—';
-      const time = s.started_at
-        ? new Date(s.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
-          (s.ended_at ? ' – ' + new Date(s.ended_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '')
-        : '—';
-      const statusBadge = s.status === 'completed' || s.status === 'confirmed'
-        ? '<span class="badge badge-success">Completed</span>'
-        : '<span class="badge badge-coord">Active</span>';
-      const instCell = isSuperAdmin
-        ? `<td style="color:var(--muted);font-size:0.8rem;">${escapeHtml(s.institution_id || '—')}</td>`
-        : '';
-      const safeId = (s.id || '').replace(/'/g, "\\'");
-
-      return `
-        <tr>
-          <td>
-            <strong>${escapeHtml(s.course_unit_name || s.name || 'N/A')}</strong>
-            ${s.course_unit_code ? `<div style="color:var(--muted);font-size:0.78rem;">${escapeHtml(s.course_unit_code)}</div>` : ''}
-          </td>
-          <td style="color:var(--muted);font-size:0.85rem;">${date}</td>
-          <td style="color:var(--muted);font-size:0.85rem;">${time}</td>
-          <td>${statusBadge}</td>
-          ${instCell}
-          <td style="color:var(--muted);font-size:0.78rem;">${escapeHtml(s.lecturer_name || 'Unknown')}</td>
-          <td>
-            <button class="btn-view" onclick="viewSessionDetails('${safeId}')">View Details</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    const instHeader = isSuperAdmin ? '<th>Institution</th>' : '';
-    document.getElementById('sessions-table-wrap').innerHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th>Course Unit</th>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Status</th>
-            ${instHeader}
-            <th>Created By</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="table-footer">${sessionsData.length} session${sessionsData.length !== 1 ? 's' : ''}</div>
-    `;
-  } catch (e) {
-    document.getElementById('sessions-table-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
-// ── VIEW SESSION DETAILS ───────────────────────────────────────────────────
-async function viewSessionDetails(sessionId) {
-  currentSessionId = sessionId;
-  document.getElementById('session-details-modal').classList.add('visible');
-  document.getElementById('session-modal-content').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Loading session details...</div>';
-
-  try {
-    const resp = await fetch(`${DAZZLING_URL}/admin/sessions/${sessionId}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    const session = data.session;
-    const stats = data.statistics;
-    const records = data.records || [];
-
-    const date = session.started_at
-      ? new Date(session.started_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-      : session.created_at
-      ? new Date(session.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-      : '—';
-
-    const time = session.started_at
-      ? new Date(session.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
-        (session.ended_at ? ' – ' + new Date(session.ended_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '')
-      : '—';
-
-    document.getElementById('session-modal-title').textContent = 
-      `Session: ${session.course_unit_name || 'N/A'}`;
-
-    const recordRows = records.length > 0 
-      ? records.map(r => {
-          const ts = r.timestamp 
-            ? new Date(r.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-            : '—';
-          const statusBadge = r.verified === 'success'
-            ? '<span class="badge badge-success">Success</span>'
-            : r.verified === 'spoof'
-            ? '<span class="badge badge-spoof">Spoof</span>'
-            : '<span class="badge badge-failed">Failed</span>';
-          const conf = r.confidence ? (r.confidence * 100).toFixed(1) + '%' : '—';
-
-          return `
-            <tr>
-              <td>${escapeHtml(r.student_id || '—')}</td>
-              <td>${statusBadge}</td>
-              <td style="color:var(--muted)">${conf}</td>
-              <td style="color:var(--muted);font-size:0.85rem;">${ts}</td>
-            </tr>
-          `;
-        }).join('')
-      : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No attendance records yet</td></tr>';
-
-    document.getElementById('session-modal-content').innerHTML = `
-      <div class="session-details-grid">
-        <div class="session-detail-card">
-          <div class="detail-label">Date</div>
-          <div class="detail-value">${date}</div>
-        </div>
-        <div class="session-detail-card">
-          <div class="detail-label">Time</div>
-          <div class="detail-value">${time}</div>
-        </div>
-        <div class="session-detail-card">
-          <div class="detail-label">Course Unit</div>
-          <div class="detail-value">${escapeHtml(session.course_unit_name || 'N/A')}</div>
-          ${session.course_unit_code ? `<div class="detail-sub">${escapeHtml(session.course_unit_code)}</div>` : ''}
-        </div>
-        <div class="session-detail-card">
-          <div class="detail-label">Lecturer</div>
-          <div class="detail-value">${escapeHtml(session.lecturer_name || 'Unknown')}</div>
-          ${session.lecturer_email ? `<div class="detail-sub">${escapeHtml(session.lecturer_email)}</div>` : ''}
-        </div>
-      </div>
-
-      <div class="session-stats-grid">
-        <div class="stat-card cyan">
-          <div class="stat-label">Total Records</div>
-          <div class="stat-value">${stats.total_records}</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-label">Verified</div>
-          <div class="stat-value">${stats.verified}</div>
-        </div>
-        <div class="stat-card orange">
-          <div class="stat-label">Failed</div>
-          <div class="stat-value">${stats.failed}</div>
-        </div>
-        <div class="stat-card red">
-          <div class="stat-label">Spoofs</div>
-          <div class="stat-value">${stats.spoof}</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-label">Success Rate</div>
-          <div class="stat-value">${stats.success_rate}%</div>
-        </div>
-      </div>
-
-      <div class="session-records-section">
-        <h4 style="margin-bottom:12px;font-size:0.95rem;">Attendance Records</h4>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Student ID</th>
-                <th>Status</th>
-                <th>Confidence</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody>${recordRows}</tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  } catch (e) {
-    document.getElementById('session-modal-content').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
-function closeSessionDetailsModal() {
-  currentSessionId = null;
-  document.getElementById('session-details-modal').classList.remove('visible');
-}
-
-
-
 // ── Tab switching ──────────────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -362,13 +98,8 @@ function switchTab(tab) {
   if (tab === 'students')   loadStudents();
   if (tab === 'superadmin') loadInstitutions();
   if (tab === 'team')       loadCoordinators();
-  if (tab === 'lecturers')  { console.log('[dashboard] switchTab: lecturers'); loadLecturers(); }
-  if (tab === 'sessions')   loadSessions();
-  if (tab === 'departments') loadDepartments();
-  if (tab === 'deptadmins')  loadDeptAdmins();
   if (tab === 'apikeys')    loadApiKeys();
   if (tab === 'billing')    loadBilling();
-  if (tab === 'analytics') loadAnalytics();
   if (tab === 'security')   loadSecurityData();
   if (tab === 'units')      loadCourseUnits();
 
@@ -432,11 +163,7 @@ async function autoLoginWithToken(accessToken, refreshToken) {
 // ── Page load: check for Supabase recovery hash OR existing session ────────
 window.addEventListener('load', async () => {
   const hash = window.location.hash;
-  const query = new URLSearchParams(window.location.search);
-  const hasRecoveryLink = (hash && hash.includes('type=recovery'))
-    || query.get('code');
-
-  if (hasRecoveryLink) {
+  if (hash && hash.includes('type=recovery')) {
     let recoveryScreenShown = false;
     const showRecoveryScreenOnce = () => {
       if (recoveryScreenShown) return;
@@ -450,10 +177,21 @@ window.addEventListener('load', async () => {
       }
     });
 
-    const result = await establishSessionFromUrl(client, {
-      allowedTypes: ['recovery'],
-    });
-    if (result.ok) showRecoveryScreenOnce();
+    const { data: sessionData } = await client.auth.getSession();
+    if (sessionData?.session) {
+      showRecoveryScreenOnce();
+    } else {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || '';
+      if (accessToken) {
+        const { data: setData } = await client.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (setData?.session) showRecoveryScreenOnce();
+      }
+    }
 
     if (recoveryScreenShown) authListener?.subscription?.unsubscribe?.();
     return;
@@ -503,14 +241,6 @@ async function confirmSetNewPassword() {
   btn.disabled = true; btn.textContent = 'Updating…';
 
   try {
-    const { data } = await client.auth.getSession();
-    if (!data?.session) {
-      msg.textContent = 'Session not ready. Please refresh and open the reset link again.';
-      msg.className = 'set-pw-msg error'; msg.style.display = 'block';
-      btn.disabled = false; btn.textContent = 'Update Password';
-      return;
-    }
-
     const { error } = await client.auth.updateUser({ password: pw1 });
     if (error) throw error;
 
@@ -607,17 +337,14 @@ async function login() {
 
   const { data: profile } = await client
     .from('profiles')
-    .select('is_admin, is_super_admin, institution_id, role')
+    .select('is_admin, is_super_admin, institution_id')
     .eq('id', data.user.id)
     .single();
 
-  const permissions = buildDashboardPermissions(profile);
-  const isAdmin           = permissions.canAccessDashboard;
-  const isSuperAdminCheck = permissions.isSuper;
-  const isCentralAdminCheck = permissions.isCentral;
-  const isDeptAdminCheck = permissions.isDept;
+  const isAdmin           = profile && (profile.is_admin === true || profile.is_admin === 'true');
+  const isSuperAdminCheck = profile && (profile.is_super_admin === true || profile.is_super_admin === 'true');
 
-  if (!profile || !permissions.canAccessDashboard) {
+  if (!profile || !(isAdmin || isSuperAdminCheck)) {
     showLoginError("Access denied. Admin account required.");
     await client.auth.signOut();
     Object.keys(localStorage).forEach(key => {
@@ -688,30 +415,7 @@ async function initDashboard(session, isFreshLogin = false) {
     if (error) throw error;
 
     currentInstitutionId = profile?.institution_id || null;
-    let permissions = buildDashboardPermissions(profile);
-
-    try {
-      const permResp = await fetch(`${DAZZLING_URL}/auth/me/permissions`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      });
-      if (permResp.ok) {
-        const permData = await permResp.json();
-        currentInstitutionId = permData.institution_id || currentInstitutionId;
-        permissions = buildDashboardPermissions({
-          ...profile,
-          is_admin: permData.permissions?.dashboard,
-          is_super_admin: permData.role === 'super_admin' || permData.is_super_admin,
-          role: permData.role,
-        }, permData.plan || 'free');
-      }
-    } catch (err) {
-      console.warn('Failed to load permissions from backend:', err);
-    }
-
-    currentPermissions = permissions;
-    isSuperAdmin = permissions.isSuper;
-    isCentralAdmin = permissions.isCentral;
-    isDeptAdmin = permissions.isDept;
+    isSuperAdmin         = profile?.is_super_admin === true;
 
     if (!isSuperAdmin && currentInstitutionId) {
       const { data: inst } = await client
@@ -771,31 +475,16 @@ async function initDashboard(session, isFreshLogin = false) {
     };
 
     tabs.appendChild(createSecureTab('tab-btn-attendance', '📅 Attendance', 'attendance', 'attendance-tab'));
+    tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
     tabs.appendChild(createSecureTab('tab-btn-aisummary', '🤖 AI Summary', 'aisummary', ''));
 
-    if (isCentralAdmin) {
-      // ── Central Admin: departments, dept admins, billing, audit only ─────────
-      if (currentPermissions?.canManageDepartments) {
-        tabs.appendChild(createSecureTab('tab-btn-departments', '🏛️ Departments', 'departments', ''));
-      }
-      if (currentPermissions?.canManageDeptAdmins) {
-        tabs.appendChild(createSecureTab('tab-btn-deptadmins', '👤 Dept Admins', 'deptadmins', ''));
-      }
-      if (currentPermissions?.canManageBilling) {
-        tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
-      }
-      if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
-      }
-
-    } else if (isSuperAdmin) {
-      // ── Super Admin: everything ───────────────────────────────────────────────
-      tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
-      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨‍🏫 Lecturers', 'lecturers', ''));
+    if (!isSuperAdmin && currentInstitutionId) {
       tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
-      tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
-      tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
+    }
 
+    tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
+
+    if (isSuperAdmin) {
       const teamInstFilter = document.getElementById('filter-team-inst');
       teamInstFilter.style.display = '';
       fetch(`${DAZZLING_URL}/admin/institutions`, {
@@ -808,13 +497,18 @@ async function initDashboard(session, isFreshLogin = false) {
           insts.map(i => `<option value="${i.id}">${i.id} — ${i.name}</option>`).join('');
       }).catch(() => {});
 
+      // FIX 2: Show the institution picker in the AI Summary tab for super admins
       const aiInstWrap = document.getElementById('ai-institution-wrap');
       if (aiInstWrap) aiInstWrap.style.display = '';
+    }
 
-      if (currentPermissions?.canManageApiKeys) {
-        tabs.appendChild(createSecureTab('tab-btn-apikeys', '⚙ API Keys', 'apikeys', 'dev-tab'));
-      }
+    if (!isSuperAdmin) {
+      tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
+    }
 
+    tabs.appendChild(createSecureTab('tab-btn-apikeys', '⚙ API Keys', 'apikeys', 'dev-tab'));
+
+    if (isSuperAdmin) {
       const adminTabBtn = document.createElement('button');
       adminTabBtn.className = 'tab-btn superadmin-tab';
       adminTabBtn.id = 'tab-btn-superadmin';
@@ -822,37 +516,10 @@ async function initDashboard(session, isFreshLogin = false) {
       adminTabBtn.addEventListener('click', () => switchTab('superadmin'));
       tabs.appendChild(adminTabBtn);
 
-      if (currentPermissions?.canViewSecurity) {
-        tabs.appendChild(createSecureTab('tab-btn-security', '🛡 Security', 'security', 'security-tab'));
-      }
-      if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
-      }
-      if (currentPermissions?.canViewAnalytics) {
-        tabs.appendChild(createSecureTab('tab-btn-analytics', '📊 Analytics', 'analytics', 'superadmin-tab'));
-      }
-
-    } else {
-      // ── Dept Admin (role='admin'): students, team, lecturers, units, billing ──
-      tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
-      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨‍🏫 Lecturers', 'lecturers', ''));
-
-      if (currentInstitutionId) {
-        tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
-      }
-
-      tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
-      tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
-      if (currentPermissions?.canManageBilling) {
-        tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
-      }
-      if (currentPermissions?.canManageApiKeys) {
-        tabs.appendChild(createSecureTab('tab-btn-apikeys', '⚙ API Keys', 'apikeys', 'dev-tab'));
-      }
-      if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
-      }
+      tabs.appendChild(createSecureTab('tab-btn-security', '🛡 Security', 'security', 'security-tab'));
     }
+
+    tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
 
     if (!isSuperAdmin && currentInstitutionId) {
       const { data: units } = await client
@@ -864,7 +531,6 @@ async function initDashboard(session, isFreshLogin = false) {
       populateAIScopeUnits();
     }
 
-    switchTab('attendance');
     await loadData();
     if (isSuperAdmin) await fetchPendingCount();
 
@@ -1095,7 +761,6 @@ async function logout() {
   currentToken         = null;
   currentInstitutionId = null;
   isSuperAdmin         = false;
-  isCentralAdmin       = false;
   allRecords           = [];
   allSecurityData      = [];
   courseUnitsCache     = [];
@@ -1698,370 +1363,6 @@ async function loadCoordinators() {
   }
 }
 
-// ── LECTURER STATE ─────────────────────────────────────────────────────────
-let lecturersData = [];
-let pendingRemoveLecturerId = null;
-let pendingRemoveLecturerName = null;
-let pendingAssignLecturerId = null;
-
-// ── LOAD LECTURERS ─────────────────────────────────────────────────────────
-async function loadLecturers() {
-  if (!currentToken) return;
-
-  document.getElementById('lecturers-table-wrap').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Loading lecturers...</div>';
-
-  try {
-    // Load course units cache if not already loaded
-    if (!isSuperAdmin && !courseUnitsCache.length && currentInstitutionId) {
-      const { data: units, error } = await client
-        .from('course_units').select('id, name, code')
-        .eq('institution_id', currentInstitutionId)
-        .order('created_at', { ascending: true });
-      if (!error) courseUnitsCache = units || [];
-    }
-
-    const instQuery = !isSuperAdmin && currentInstitutionId
-      ? `?institution_id=${encodeURIComponent(currentInstitutionId)}&role=lecturer`
-      : `?role=lecturer`;
-
-    const resp = await fetch(`${DAZZLING_URL}/lecturers${instQuery}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    });
-    const data = resp.ok ? await resp.json() : null;
-    console.log('[dashboard] loadLecturers: backend_response_ok=', resp.ok, 'status=', resp.status, 'body=', data);
-    if (!resp.ok) {
-      const err = data?.detail || data?.message || `HTTP ${resp.status}`;
-      throw new Error(err);
-    }
-
-    lecturersData = Array.isArray(data) ? data : (data?.lecturers || []);
-    console.log('[dashboard] loadLecturers: lecturers_found=', lecturersData.length);
-
-    if (!lecturersData.length) {
-      document.getElementById('lecturers-table-wrap').innerHTML = `
-        <div class="loading" style="padding:48px;">
-          <div style="margin-bottom:12px;font-size:1.5rem;">👨‍🏫</div>
-          No lecturers yet. Invite someone to get started.
-        </div>
-      `;
-      return;
-    }
-
-    // For each lecturer, fetch their assigned course units from lecturer_courses
-    const lecturerIds = lecturersData.map(l => l.id);
-    const { data: assignments } = await client
-      .from('lecturer_courses')
-      .select('lecturer_id, course_unit_id')
-      .in('lecturer_id', lecturerIds);
-
-    const assignmentMap = {};
-    (assignments || []).forEach(a => {
-      if (!assignmentMap[a.lecturer_id]) assignmentMap[a.lecturer_id] = [];
-      assignmentMap[a.lecturer_id].push(a.course_unit_id);
-    });
-
-    const rows = lecturersData.map(l => {
-      const joined = l.created_at
-        ? new Date(l.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-        : '—';
-      const safeName = escapeJsString(l.full_name || '');
-      const instCell = isSuperAdmin
-        ? `<td style="color:var(--muted);font-size:0.8rem;">${escapeHtml(l.institution_id || '—')}</td>`
-        : '';
-
-      const assignedUnitIds = assignmentMap[l.id] || [];
-      const assignedUnits = assignedUnitIds
-        .map(id => courseUnitsCache.find(u => u.id === id)).filter(u => u)
-        .map(u => `${escapeHtml(u.name)}${u.code ? ' (' + escapeHtml(u.code) + ')' : ''}`);
-
-      return `
-        <tr>
-          <td>
-            ${l.full_name ? escapeHtml(l.full_name) : '<span style="color:var(--muted)">Pending setup</span>'}
-            <div style="color:var(--muted);font-size:0.78rem;margin-top:2px;">${escapeHtml(l.email || '')}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
-              ${assignedUnits.length > 0
-                ? assignedUnits.map(u =>
-                    `<span style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);color:var(--blue);border-radius:100px;padding:2px 10px;font-size:0.68rem;font-weight:600;letter-spacing:0.05em;">${u}</span>`
-                  ).join('')
-                : '<span style="color:var(--muted);font-size:0.78rem;">No units assigned</span>'
-              }
-            </div>
-          </td>
-          <td><span class="badge badge-coord" style="background:rgba(168,85,247,0.12);color:#a855f7;border-color:rgba(168,85,247,0.25);">Lecturer</span></td>
-          ${instCell}
-          <td>
-            <button onclick="openAssignLecturerModal('${escapeJsString(l.id)}', '${safeName}')"
-              style="background:transparent;border:1px solid rgba(74,158,255,0.4);color:var(--blue);padding:4px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;transition:background 0.2s;"
-              onmouseover="this.style.background='rgba(74,158,255,0.1)'"
-              onmouseout="this.style.background='transparent'">Assign Units</button>
-          </td>
-          <td style="color:var(--muted);font-size:0.8rem;">${joined}</td>
-          <td><button class="btn-delete" onclick="openRemoveLecturerModal('${escapeJsString(l.id)}', '${safeName}')">Remove</button></td>
-        </tr>
-      `;
-    }).join('');
-
-    document.getElementById('lecturers-table-wrap').innerHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-            ${isSuperAdmin ? '<th>Institution</th>' : ''}
-            <th>Units</th>
-            <th>Added</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="table-footer">${lecturersData.length} lecturer${lecturersData.length !== 1 ? 's' : ''}</div>
-    `;
-  } catch (e) {
-    document.getElementById('lecturers-table-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
-// ── INVITE LECTURER ────────────────────────────────────────────────────────
-function openInviteLecturerModal() {
-  document.getElementById('invite-lecturer-name').value = '';
-  document.getElementById('invite-lecturer-email').value = '';
-  document.getElementById('invite-lecturer-error').style.display = 'none';
-  document.getElementById('send-lecturer-invite-btn').disabled = false;
-  document.getElementById('send-lecturer-invite-btn').textContent = 'Send Invite';
-  document.getElementById('invite-lecturer-modal').classList.add('visible');
-}
-
-function closeInviteLecturerModal() {
-  document.getElementById('invite-lecturer-modal').classList.remove('visible');
-}
-
-async function sendLecturerInvite() {
-  const nameEl  = document.getElementById('invite-lecturer-name');
-  const emailEl = document.getElementById('invite-lecturer-email');
-  const errEl   = document.getElementById('invite-lecturer-error');
-  const btn     = document.getElementById('send-lecturer-invite-btn');
-  const name    = nameEl.value.trim();
-  const email   = emailEl.value.trim();
-
-  errEl.style.display = 'none';
-  if (!name)  { errEl.textContent = 'Please enter a full name.';     errEl.style.display = 'block'; return; }
-  if (!email) { errEl.textContent = 'Please enter an email address.'; errEl.style.display = 'block'; return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Sending...';
-
-  try {
-    const formData = new FormData();
-    formData.append('full_name', name);
-    formData.append('email', email);
-    formData.append('role', 'lecturer');
-
-    const resp = await fetch(`${DAZZLING_URL}/invite-coordinator`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-      body: formData,
-    });
-
-    const result = await resp.json();
-    if (resp.ok) {
-      closeInviteLecturerModal();
-      showToast(result.message || `✓ Lecturer added: ${email}`, 'success');
-      await loadLecturers();
-    } else {
-      errEl.textContent = result.detail || 'Invite failed. Please try again.';
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Send Invite';
-    }
-  } catch (e) {
-    errEl.textContent = `Error: ${e.message}`;
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Send Invite';
-  }
-}
-
-// ── ASSIGN LECTURER TO UNITS ───────────────────────────────────────────────
-function openAssignLecturerModal(lecturerId, lecturerName) {
-  pendingAssignLecturerId = lecturerId;
-
-  document.getElementById('assign-lecturer-modal-desc').textContent =
-    `Select which course units ${lecturerName || 'this lecturer'} teaches.`;
-  document.getElementById('assign-lecturer-error').style.display = 'none';
-
-  // Populate unit select
-  const select = document.getElementById('assign-lecturer-unit-select');
-  select.innerHTML = courseUnitsCache.length
-    ? courseUnitsCache.map(u =>
-        `<option value="${escapeAttr(u.id)}">${escapeHtml(u.name)}${u.code ? ' (' + escapeHtml(u.code) + ')' : ''}</option>`
-      ).join('')
-    : '<option disabled>No course units found</option>';
-
-  // Pre-select already assigned units
-  const lecturer = lecturersData.find(l => l.id === lecturerId);
-  if (lecturer) {
-    // Get current assignments from the table rows (already loaded)
-    const unitBadges = document.querySelectorAll(`#lecturers-table-wrap span[data-lid="${lecturerId}"]`);
-    // Use the assignments loaded during loadLecturers
-    client.from('lecturer_courses')
-      .select('course_unit_id')
-      .eq('lecturer_id', lecturerId)
-      .then(({ data }) => {
-        const assigned = (data || []).map(a => a.course_unit_id);
-        Array.from(select.options).forEach(opt => {
-          opt.selected = assigned.includes(opt.value);
-        });
-      });
-  }
-
-  document.getElementById('assign-lecturer-modal').classList.add('visible');
-}
-
-function closeAssignLecturerModal() {
-  pendingAssignLecturerId = null;
-  document.getElementById('assign-lecturer-modal').classList.remove('visible');
-}
-
-async function confirmAssignLecturer() {
-  if (!pendingAssignLecturerId || !currentToken) return;
-
-  const select = document.getElementById('assign-lecturer-unit-select');
-  const selectedUnitIds = Array.from(select.options)
-    .filter(o => o.selected)
-    .map(o => o.value);
-
-  const errEl = document.getElementById('assign-lecturer-error');
-  const btn   = document.getElementById('confirm-assign-lecturer-btn');
-  errEl.style.display = 'none';
-
-  if (selectedUnitIds.length === 0) {
-    errEl.textContent = 'Please select at least one course unit.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-
-  try {
-    const lecturerId = pendingAssignLecturerId;
-
-    // 1. Delete all existing assignments for this lecturer
-    const { error: delError } = await client
-      .from('lecturer_courses')
-      .delete()
-      .eq('lecturer_id', lecturerId);
-
-    if (delError) throw delError;
-
-    // 2. Assign each selected course unit via backend API
-    const results = [];
-    for (const unitId of selectedUnitIds) {
-      const unitName = Array.from(select.options)
-        .find(o => o.value === unitId)?.text || unitId;
-
-      try {
-        const formData = new FormData();
-        formData.append('lecturer_id', lecturerId);
-        formData.append('course_unit_id', unitId);
-        if (currentInstitutionId) {
-          formData.append('institution_id', currentInstitutionId);
-        }
-
-        const resp = await fetch(`${DAZZLING_URL}/admin/lecturer-courses`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${currentToken}` },
-          body: formData,
-        });
-
-        const result = await resp.json();
-        if (resp.ok) {
-          results.push({ unit: unitName, success: true });
-        } else {
-          results.push({ unit: unitName, success: false, error: result.detail || 'Unknown error' });
-        }
-      } catch (e) {
-        results.push({ unit: unitName, success: false, error: e.message });
-      }
-    }
-
-    // 3. Show detailed feedback
-    const successCount = results.filter(r => r.success).length;
-    const failedCount = results.filter(r => !r.success).length;
-
-    if (failedCount === 0) {
-      closeAssignLecturerModal();
-      showToast(`✓ ${successCount} course unit${successCount !== 1 ? 's' : ''} assigned successfully`, 'success');
-    } else {
-      const failedUnits = results.filter(r => !r.success).map(r => r.unit).join(', ');
-      errEl.innerHTML = `<strong>Partial success:</strong> ${successCount} assigned, ${failedCount} failed.<br>Failed units: ${escapeHtml(failedUnits)}`;
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Save';
-      
-      if (successCount > 0) {
-        showToast(`⚠ ${successCount} assigned, ${failedCount} failed`, 'error');
-      }
-    }
-
-    await loadLecturers();
-  } catch (e) {
-    errEl.textContent = `Failed: ${e.message}`;
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Save';
-  }
-}
-
-// ── REMOVE LECTURER ────────────────────────────────────────────────────────
-function openRemoveLecturerModal(lecturerId, lecturerName) {
-  pendingRemoveLecturerId   = lecturerId;
-  pendingRemoveLecturerName = lecturerName;
-  document.getElementById('remove-lecturer-modal-msg').textContent =
-    `Are you sure you want to remove ${lecturerName || 'this lecturer'}? They will lose access immediately.`;
-  document.getElementById('remove-lecturer-modal').classList.add('visible');
-}
-
-function closeRemoveLecturerModal() {
-  pendingRemoveLecturerId   = null;
-  pendingRemoveLecturerName = null;
-  document.getElementById('remove-lecturer-modal').classList.remove('visible');
-}
-
-async function confirmRemoveLecturer() {
-  if (!pendingRemoveLecturerId || !currentToken) return;
-  const lecturerId = pendingRemoveLecturerId;
-  closeRemoveLecturerModal();
-
-  try {
-    // 1. Remove lecturer_courses assignments first
-    await client
-      .from('lecturer_courses')
-      .delete()
-      .eq('lecturer_id', lecturerId);
-
-    // 2. Delete profile via existing coordinator delete endpoint
-    const resp = await fetch(`${DAZZLING_URL}/coordinators/${lecturerId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-    });
-
-    if (resp.ok) {
-      showToast('Lecturer removed', 'success');
-      await loadLecturers();
-    } else {
-      const err = await resp.json().catch(() => ({}));
-      showToast(`Failed: ${err.detail || 'Unknown error'}`, 'error');
-    }
-  } catch (e) {
-    showToast(`Error: ${e.message}`, 'error');
-  }
-}
-
 // ── COURSE UNITS ───────────────────────────────────────────────────────────
 async function loadCourseUnits() {
   if (!currentToken || !currentInstitutionId) return;
@@ -2103,113 +1404,6 @@ async function loadCourseUnits() {
     `;
   } catch (e) {
     document.getElementById('units-table-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${e.message}</div>`;
-  }
-}
-
-// ── DEPARTMENTS ────────────────────────────────────────────────────────────
-async function loadDepartments() {
-  if (!currentToken) return;
-  document.getElementById('departments-table-wrap').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Loading departments...</div>';
-
-  try {
-    const instQuery = currentInstitutionId ? `?institution_id=${encodeURIComponent(currentInstitutionId)}` : '';
-    const resp = await fetch(`${DAZZLING_URL}/departments${instQuery}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    const departments = data.departments || [];
-
-    if (!departments.length) {
-      document.getElementById('departments-table-wrap').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">🏛️</div>
-          <p>No departments yet.<br>Add your first department above.</p>
-        </div>`;
-      return;
-    }
-
-    const rows = departments.map(d => {
-      const created = d.created_at
-        ? new Date(d.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-        : '—';
-      return `<tr>
-        <td><strong>${escapeHtml(d.name)}</strong></td>
-        <td style="color:var(--muted);font-size:0.78rem;">${created}</td>
-        <td><button class="btn-delete" onclick="deleteDepartment('${escapeJsString(d.id)}', '${escapeJsString(d.name)}')">Delete</button></td>
-      </tr>`;
-    }).join('');
-
-    document.getElementById('departments-table-wrap').innerHTML = `
-      <table>
-        <thead><tr><th>Department Name</th><th>Created</th><th>Action</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="table-footer">${departments.length} department${departments.length !== 1 ? 's' : ''}</div>
-    `;
-  } catch (e) {
-    document.getElementById('departments-table-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${e.message}</div>`;
-  }
-}
-
-// ── DEPT ADMINS ────────────────────────────────────────────────────────────
-async function loadDeptAdmins() {
-  if (!currentToken) return;
-  document.getElementById('deptadmins-table-wrap').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Loading department admins...</div>';
-
-  try {
-    const instQuery = currentInstitutionId ? `?institution_id=${encodeURIComponent(currentInstitutionId)}` : '';
-    const resp = await fetch(`${DAZZLING_URL}/dept-admins${instQuery}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    const profiles = data.dept_admins || [];
-
-    if (!profiles.length) {
-      document.getElementById('deptadmins-table-wrap').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">👤</div>
-          <p>No department admins yet.<br>Invite your first dept admin above.</p>
-        </div>`;
-      return;
-    }
-
-    const rows = profiles.map(p => {
-      const created = p.created_at
-        ? new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-        : '—';
-      return `<tr>
-        <td><strong>${escapeHtml(p.full_name || '—')}</strong></td>
-        <td style="color:var(--muted)">${escapeHtml(p.email || '—')}</td>
-        <td style="color:var(--muted);font-size:0.78rem;">${created}</td>
-        <td><button class="btn-delete" onclick="removeDeptAdmin('${escapeJsString(p.id)}', '${escapeJsString(p.full_name)}')">Remove</button></td>
-      </tr>`;
-    }).join('');
-
-    document.getElementById('deptadmins-table-wrap').innerHTML = `
-      <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Created</th><th>Action</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="table-footer">${profiles.length} admin${profiles.length !== 1 ? 's' : ''}</div>
-    `;
-  } catch (e) {
-    document.getElementById('deptadmins-table-wrap').innerHTML =
       `<div class="loading" style="color:var(--red)">Failed to load: ${e.message}</div>`;
   }
 }
@@ -2274,82 +1468,6 @@ function populateInviteUnitDropdown() {
   if (!sel) return;
   sel.innerHTML = '<option value="">— Select a unit —</option>' +
     courseUnitsCache.map(u => `<option value="${u.id}">${u.name}${u.code ? ' (' + u.code + ')' : ''}</option>`).join('');
-}
-
-// ── Load analytics ────────────────────────────────────────────────────────
-async function loadAnalytics() {
-  if (!currentToken || !isSuperAdmin) return;
-
-  document.getElementById('analytics-wrap').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Loading analytics...</div>';
-
-  try {
-    const [revenue, churn, usage, payments] = await Promise.all([
-      fetch(`${DAZZLING_URL}/admin/analytics/revenue`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
-      fetch(`${DAZZLING_URL}/admin/analytics/churn`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
-      fetch(`${DAZZLING_URL}/admin/analytics/usage`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
-      fetch(`${DAZZLING_URL}/admin/analytics/payments`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
-    ]);
-
-    const planRows = Object.entries(revenue.plan_breakdown || {}).map(([plan, data]) =>
-      `<tr><td style="text-transform:capitalize;">${escapeHtml(plan)}</td><td>${data.count}</td><td>KES ${data.mrr.toLocaleString()}</td></tr>`
-    ).join('');
-
-    const usageRows = (usage || []).map(u =>
-      `<tr>
-        <td>${escapeHtml(u.institution)}</td>
-        <td style="text-transform:capitalize;">${escapeHtml(u.plan)}</td>
-        <td>${u.students} / ${u.limit === 999999 ? '∞' : u.limit}</td>
-        <td>
-          <div style="background:var(--border);border-radius:4px;height:6px;width:100px;display:inline-block;vertical-align:middle;">
-            <div style="background:var(--cyan);height:6px;border-radius:4px;width:${Math.min(u.utilization,100)}%;"></div>
-          </div>
-          <span style="margin-left:8px;color:var(--muted);font-size:0.8rem;">${u.utilization}%</span>
-        </td>
-      </tr>`
-    ).join('');
-
-    document.getElementById('analytics-wrap').innerHTML = `
-      <div class="analytics-metrics-grid">
-        <div class="metric-card">
-          <div class="metric-label">MRR</div>
-          <div class="metric-value">KES ${(revenue.mrr||0).toLocaleString()}</div>
-          <div class="metric-sub">ARR: KES ${(revenue.arr||0).toLocaleString()}</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Total Institutions</div>
-          <div class="metric-value">${revenue.total_institutions||0}</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Churn Rate</div>
-          <div class="metric-value">${churn.churn_rate||0}%</div>
-          <div class="metric-sub">${churn.churned_count} churned in ${churn.period_days}d</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Payment Success</div>
-          <div class="metric-value">${payments.success_rate||0}%</div>
-          <div class="metric-sub">${payments.successful||0} / ${payments.total_payments||0} payments</div>
-        </div>
-      </div>
-      <h3 style="margin:24px 0 12px;font-size:0.95rem;">Plan Breakdown</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Plan</th><th>Institutions</th><th>MRR</th></tr></thead>
-          <tbody>${planRows}</tbody>
-        </table>
-      </div>
-      <h3 style="margin:24px 0 12px;font-size:0.95rem;">Institution Usage</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Institution</th><th>Plan</th><th>Students</th><th>Utilization</th></tr></thead>
-          <tbody>${usageRows}</tbody>
-        </table>
-      </div>
-    `;
-  } catch (e) {
-    document.getElementById('analytics-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${escapeHtml(e.message)}</div>`;
-  }
 }
 
 // ── Load billing ───────────────────────────────────────────────────────────
@@ -2495,235 +1613,6 @@ async function handleUpgrade(plan) {
 }
 
 // ── API KEYS ───────────────────────────────────────────────────────────────
-// ── DEPARTMENTS & DEPT ADMINS STATE ───────────────────────────────────────
-let departmentsCache         = [];
-let deptAdminsData           = [];
-let pendingRemoveDeptAdminId   = null;
-let pendingRemoveDeptAdminName = null;
-
-// ══════════════════════════════════════════════════════════════════════════
-// DEPARTMENTS (REMOVED - using backend API version at line ~1753)
-// ══════════════════════════════════════════════════════════════════════════
-// This duplicate function has been removed. The active loadDepartments() 
-// function now calls the backend /departments endpoint instead of 
-// querying Supabase directly.
-
-async function createDepartment() {
-  const nameEl = document.getElementById('dept-name-input');
-  const errEl  = document.getElementById('dept-create-error');
-  const btn    = document.getElementById('add-dept-btn');
-  const name   = nameEl.value.trim();
-
-  errEl.style.display = 'none';
-  if (!name) {
-    errEl.textContent   = 'Department name is required.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  btn.disabled    = true;
-  btn.textContent = 'Adding...';
-
-  try {
-    const formData = new FormData();
-    formData.append('name', name);
-    if (currentInstitutionId) {
-      formData.append('institution_id', currentInstitutionId);
-    }
-
-    const resp = await fetch(`${DAZZLING_URL}/departments`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-      body: formData,
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const result = await resp.json();
-    nameEl.value = '';
-    showToast(result.message || `✓ "${name}" added`, 'success');
-    await loadDepartments();
-  } catch (e) {
-    errEl.textContent   = e.message || 'Failed to create department.';
-    errEl.style.display = 'block';
-  } finally {
-    btn.disabled    = false;
-    btn.textContent = '+ Add Department';
-  }
-}
-
-async function deleteDepartment(deptId, deptName) {
-  if (!confirm(`Delete "${deptName}"? Department admins assigned to it will become unassigned.`)) return;
-
-  try {
-    const resp = await fetch(`${DAZZLING_URL}/departments/${deptId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const result = await resp.json();
-    showToast(result.message || `"${deptName}" deleted`, 'success');
-    await loadDepartments();
-  } catch (e) {
-    showToast(`Failed: ${e.message}`, 'error');
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// DEPT ADMINS (REMOVED - using backend API version at line ~1796)
-// ══════════════════════════════════════════════════════════════════════════
-// This duplicate function has been removed. The active loadDeptAdmins() 
-// function now calls the backend /dept-admins endpoint instead of 
-// querying Supabase directly.
-
-// ── Invite Dept Admin ──────────────────────────────────────────────────────
-function populateDeptAdminDeptDropdown() {
-  const sel = document.getElementById('invite-deptadmin-dept');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Select a department —</option>' +
-    departmentsCache.map(d =>
-      `<option value="${escapeAttr(d.id)}">${escapeHtml(d.name)}</option>`
-    ).join('');
-}
-
-function openInviteDeptAdminModal() {
-  document.getElementById('invite-deptadmin-name').value  = '';
-  document.getElementById('invite-deptadmin-email').value = '';
-  document.getElementById('invite-deptadmin-error').style.display = 'none';
-  document.getElementById('send-deptadmin-invite-btn').disabled   = false;
-  document.getElementById('send-deptadmin-invite-btn').textContent = 'Send Invite';
-
-  // Load departments into dropdown via backend API
-  if (!departmentsCache.length) {
-    const instQuery = currentInstitutionId ? `?institution_id=${encodeURIComponent(currentInstitutionId)}` : '';
-    fetch(`${DAZZLING_URL}/departments${instQuery}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    })
-      .then(r => r.json())
-      .then(data => {
-        departmentsCache = data.departments || [];
-        populateDeptAdminDeptDropdown();
-      })
-      .catch(() => {
-        departmentsCache = [];
-        populateDeptAdminDeptDropdown();
-      });
-  } else {
-    populateDeptAdminDeptDropdown();
-  }
-
-  document.getElementById('invite-deptadmin-modal').classList.add('visible');
-  setTimeout(() => document.getElementById('invite-deptadmin-name').focus(), 100);
-}
-
-function closeInviteDeptAdminModal() {
-  document.getElementById('invite-deptadmin-modal').classList.remove('visible');
-}
-
-async function sendDeptAdminInvite() {
-  const nameEl  = document.getElementById('invite-deptadmin-name');
-  const emailEl = document.getElementById('invite-deptadmin-email');
-  const deptEl  = document.getElementById('invite-deptadmin-dept');
-  const errEl   = document.getElementById('invite-deptadmin-error');
-  const btn     = document.getElementById('send-deptadmin-invite-btn');
-  const name    = nameEl.value.trim();
-  const email   = emailEl.value.trim();
-  const deptId  = deptEl.value;
-
-  errEl.style.display = 'none';
-  if (!name)  { errEl.textContent = 'Please enter a full name.';     errEl.style.display = 'block'; return; }
-  if (!email) { errEl.textContent = 'Please enter an email address.'; errEl.style.display = 'block'; return; }
-
-  btn.disabled    = true;
-  btn.textContent = 'Sending...';
-
-  try {
-    const formData = new FormData();
-    formData.append('full_name', name);
-    formData.append('email', email);
-    formData.append('role', 'dept_admin');
-
-    const resp = await fetch(`${DAZZLING_URL}/invite-coordinator`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-      body: formData,
-    });
-
-    const result = await resp.json();
-
-    if (resp.ok) {
-      // If a department was selected, update their profile with department_id
-      if (deptId && result.invited_id) {
-        await client
-          .from('profiles')
-          .update({ department_id: deptId })
-          .eq('id', result.invited_id);
-      }
-
-      closeInviteDeptAdminModal();
-      showToast(`✓ Invite sent to ${email}`, 'success');
-      await loadDeptAdmins();
-    } else {
-      errEl.textContent   = result.detail || 'Invite failed. Please try again.';
-      errEl.style.display = 'block';
-      btn.disabled        = false;
-      btn.textContent     = 'Send Invite';
-    }
-  } catch (e) {
-    errEl.textContent   = `Error: ${e.message}`;
-    errEl.style.display = 'block';
-    btn.disabled        = false;
-    btn.textContent     = 'Send Invite';
-  }
-}
-
-// ── Remove Dept Admin ──────────────────────────────────────────────────────
-function openRemoveDeptAdminModal(adminId, adminName) {
-  pendingRemoveDeptAdminId   = adminId;
-  pendingRemoveDeptAdminName = adminName;
-  document.getElementById('remove-deptadmin-modal-msg').textContent =
-    `Are you sure you want to remove ${adminName || 'this admin'}? They will lose access immediately.`;
-  document.getElementById('remove-deptadmin-modal').classList.add('visible');
-}
-
-function closeRemoveDeptAdminModal() {
-  pendingRemoveDeptAdminId   = null;
-  pendingRemoveDeptAdminName = null;
-  document.getElementById('remove-deptadmin-modal').classList.remove('visible');
-}
-
-async function confirmRemoveDeptAdmin() {
-  if (!pendingRemoveDeptAdminId || !currentToken) return;
-  const adminId = pendingRemoveDeptAdminId;
-  closeRemoveDeptAdminModal();
-
-  try {
-    const resp = await fetch(`${DAZZLING_URL}/coordinators/${adminId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-    });
-
-    if (resp.ok) {
-      showToast('Department admin removed', 'success');
-      await loadDeptAdmins();
-    } else {
-      const err = await resp.json().catch(() => ({}));
-      showToast(`Failed: ${err.detail || 'Unknown error'}`, 'error');
-    }
-  } catch (e) {
-    showToast(`Error: ${e.message}`, 'error');
-  }
-}
-
-
 async function loadApiKeys() {
   if (!currentToken) return;
   document.getElementById('apikeys-table-wrap').innerHTML =
@@ -3120,3 +2009,6 @@ document.addEventListener('keydown', e => {
     login();
   }
 });
+JSEOF
+echo "JS written"
+Output

@@ -88,22 +88,21 @@ async def check_expiring_subscriptions() -> None:
     try:
         # Get institutions with subscriptions expiring soon
         res = supabase_admin.table("institutions")\
-            .select("id, name, admin_email, plans, subscription_expires_at")\
-            .not_.is_("subscription_expires_at", "null")\
-            .lte("subscription_expires_at", expiry_threshold)\
-            .gte("subscription_expires_at", datetime.now(timezone.utc).isoformat())\
-            .eq("is_active", True)\
+            .select("id, name, admin_email, plan, subscription_end")\
+            .not_.is_("subscription_end", "null")\
+            .lte("subscription_end", expiry_threshold)\
+            .gte("subscription_end", datetime.now(timezone.utc).isoformat())\
             .execute()
         
         for inst in res.data or []:
-            expiry = datetime.fromisoformat(inst["subscription_expires_at"].replace("Z", "+00:00"))
+            expiry = datetime.fromisoformat(inst["subscription_end"].replace("Z", "+00:00"))
             days_left = (expiry - datetime.now(timezone.utc)).days
             
             if inst.get("admin_email"):
                 await email_util.send_subscription_reminder(
                     email=inst["admin_email"],
                     institution_name=inst["name"],
-                    plan=inst["plans"],
+                    plan=inst["plan"],
                     days_left=days_left
                 )
                 logger.info(f"[subscriptions] Reminder sent to {inst['name']} ({days_left} days left)")
@@ -206,6 +205,17 @@ async def process_auto_renewals():
                 }).execute()
                 
                 logger.info(f"[renewals] Generated invoice for {institution_id}: {invoice.invoice_id}")
+
+                # Send renewal email
+                admin_email = inst_data.get('admin_email')
+                if admin_email:
+                    await email_util.send_subscription_reminder(
+                        email=admin_email,
+                        institution_name=inst_data.get('name', 'Your Institution'),
+                        plan=plan,
+                        days_left=7
+                    )
+                    logger.info(f"[renewals] Renewal email sent to {admin_email}")
                 
                 # Update next renewal date (30 days from now)
                 next_renewal = now + timedelta(days=30)

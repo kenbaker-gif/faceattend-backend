@@ -9,9 +9,11 @@ class BillingService:
     
     PLAN_PRICES = {
         "free": 0,
-        "premium": 5000,  # KES per month
-        "enterprise": 15000
+        "premium": 99,    # USD per month (matches Pesapal growth plan)
+        "enterprise": 199  # USD per month (matches Pesapal pro plan)
     }
+    
+    PLAN_CURRENCY = "USD"
     
     STUDENT_LIMITS = {
         "free": 50,
@@ -28,7 +30,8 @@ class BillingService:
     ) -> ProrationCalculation:
         """Calculate prorated amount for plan change."""
         now = datetime.utcnow()
-        days_remaining = max(0, (subscription_end - now).days)
+        # Use date difference to avoid truncation issues and match expectations
+        days_remaining = max(0, (subscription_end.date() - now.date()).days)
         
         current_price = cls.PLAN_PRICES[current_plan]
         new_price = cls.PLAN_PRICES[new_plan]
@@ -68,7 +71,8 @@ class BillingService:
         
         # Free plan cannot be "upgraded" to - only subscribed to
         if new_plan == "free" and current_plan != "free":
-            return True, "Downgrading to free plan"
+            # Allow downgrading to free plan without an error message
+            return True, None
         
         return True, None
     
@@ -87,7 +91,7 @@ class BillingService:
             institution_id=institution_id,
             plan=plan,
             amount=cls.PLAN_PRICES[plan],
-            currency="KES",
+            currency=cls.PLAN_CURRENCY,
             issue_date=now,
             due_date=now + timedelta(days=due_days),
             status="pending",

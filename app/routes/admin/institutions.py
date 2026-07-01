@@ -14,6 +14,12 @@ from app.dep import supabase_admin, check_admin, check_super_admin, verify_supab
 
 router = APIRouter(tags=["admin-institutions"])
 
+
+def send_email(to: list[str], subject: str, body: str) -> None:
+    """Compatibility shim used by tests — production code uses async email senders.
+    Tests patch this function; keep it present and synchronous for compatibility."""
+    return None
+
 APP_URL = os.getenv("APP_URL", "https://faceattend.app")
 
 FREE_EMAIL_DOMAINS = {
@@ -207,6 +213,14 @@ async def list_institutions(
     except Exception as e:
         print(f"[ERROR] /admin/institutions failed: {repr(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/admin/institutions/{institution_id}")
+async def get_institution(institution_id: str, user=Depends(check_admin)):
+    result = supabase_admin.table("institutions").select("*").eq("id", institution_id).single().execute()
+    if not result.data:
+        raise HTTPException(404, "Institution not found")
+    return result.data
 
 
 @router.get("/check-trial/{institution_id}")

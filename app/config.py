@@ -40,3 +40,8 @@ class Settings:
         return ["http://localhost:3000", "http://localhost:8080"]
 
 settings = Settings()
+# Backwards-compatible lowercase aliases expected by tests
+settings.supabase_url = settings.SUPABASE_URL
+settings.supabase_key = settings.SUPABASE_KEY
+settings.pesapal_env = settings.PESAPAL_ENV
+settings.email_from = settings.ZOHO_SMTP_USER

@@ -1,6 +1,6 @@
 """Analytics API endpoints — super admin only."""
 from fastapi import APIRouter, Depends, HTTPException
-from app.dep import supabase_admin, check_admin, _bool_flag
+from app.dep import supabase_admin, check_admin, build_admin_context
 from app.services.analytics import AnalyticsService
 
 router = APIRouter(prefix="/admin/analytics", tags=["admin-analytics"])
@@ -11,7 +11,8 @@ def _require_super_admin(user=Depends(check_admin)):
         .select("is_super_admin, role") \
         .eq("id", user.id).single().execute()
     p = profile.data or {}
-    if not (_bool_flag(p.get("is_super_admin")) or p.get("role") == "super_admin"):
+    ctx = build_admin_context(p)
+    if not ctx["is_super"]:
         raise HTTPException(status_code=403, detail="Super admin access required")
     return user
 

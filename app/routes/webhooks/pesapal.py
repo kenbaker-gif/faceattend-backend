@@ -216,15 +216,17 @@ async def ipn_handler(request: Request):
     plan           = order["plan"]
 
     try:
-        # Calculate subscription expiry (30 days from now)
+        # Map Pesapal plan names back to billing plan names
+        PLAN_MAP = {"starter": "free", "growth": "premium", "pro": "enterprise"}
+        billing_plan = PLAN_MAP.get(plan, plan)
+
         expiry = datetime.now() + timedelta(days=30)
         
         supabase_admin.table("institutions").update({
-            "plans": plan,
-            "subscription_expires_at": expiry.isoformat(),
-            "last_payment_date": datetime.now().isoformat()
+            "plan": billing_plan,
+            "subscription_end": expiry.isoformat(),
         }).eq("id", institution_id).execute()
-        print(f"✅ Institution {institution_id} upgraded to {plan} (expires {expiry.date()})")
+        print(f"✅ Institution {institution_id} upgraded to {billing_plan} (expires {expiry.date()})")
 
         supabase_admin.table("pesapal_orders").delete().eq("order_id", merchant_reference).execute()
 
