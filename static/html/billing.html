@@ -40,6 +40,12 @@
         </section>
     </div>
 
+    <script src="/static/js/supabase.min.js"></script>
+    <script>
+      const SUPABASE_URL = "https://xrlsltunfgjxooyyrora.supabase.co";
+      const SUPABASE_ANON_KEY = "sb_publishable_qRH90RKcsglvtumJPWDxng_ju9Lploh";
+      const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
     <script src="/static/js/billing.js"></script>
 </body>
 </html>

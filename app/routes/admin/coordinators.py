@@ -65,6 +65,7 @@ async def invite_coordinator(
     full_name: str = Form(...),
     email: str = Form(...),
     institution_id: str = Form(default=None),
+    department_id: Optional[str] = Form(None),
     course_unit_id: Optional[str] = Form(None),
     role: str = Form(default="coordinator"),
     user=Depends(check_admin),
@@ -111,6 +112,10 @@ async def invite_coordinator(
     # course_unit_id is only stored on coordinator profiles.
     # Lecturers may be assigned to a course unit via the lecturer_courses table.
     course_unit_id = course_unit_id.strip() if course_unit_id and course_unit_id.strip() else None
+    department_id = department_id.strip() if department_id and department_id.strip() else None
+
+    if role == "dept_admin" and not department_id:
+        raise HTTPException(status_code=400, detail="dept_admin invites require department_id.")
 
     invited_user_id = None
     if role == "lecturer":
@@ -149,6 +154,7 @@ async def invite_coordinator(
             "is_super_admin": False,
             "role":           role,
             "course_unit_id": None,
+            "department_id":  department_id,
         }
 
         try:

@@ -33,6 +33,7 @@ from app.routes.admin.sessions import router as admin_sessions_router
 from app.routes.admin.billing import router as admin_billing_router
 from app.routes.admin.auto_renewal import router as admin_auto_renewal_router
 from app.routes.admin.analytics import router as admin_analytics_router
+from app.routes.admin.super_admin import router as admin_super_router
 from app.routes.pages import router as pages_router
 from app.routes.api.v1 import router as v1_router
 from app.routes.webhooks.pesapal import router as pesapal_router
@@ -111,4 +112,5 @@ app.include_router(admin_sessions_router)
 app.include_router(admin_billing_router)
 app.include_router(admin_auto_renewal_router)
 app.include_router(admin_analytics_router)
+app.include_router(admin_super_router)
 app.include_router(pages_router)

@@ -23,7 +23,8 @@ const API_URL = faceattendApiBase();
 const DAZZLING_URL = API_URL;
 
 const { createClient } = supabase;
-const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const client = window.__faceattendSupabaseAuthClient || createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.__faceattendSupabaseAuthClient = client;
 
 // ── Sign out helper ────────────────────────────────────────────────────────
 async function signOutAndClear() {
@@ -36,6 +37,7 @@ async function signOutAndClear() {
 let currentToken         = null;
 let aiSummaryData        = null;
 let currentInstitutionId = null;
+let currentDepartmentId  = null;
 let isSuperAdmin         = false;
 let isCentralAdmin       = false;
 let isDeptAdmin          = false;
@@ -92,10 +94,11 @@ function normalizeRole(role) {
 }
 
 function buildDashboardPermissions(profile = {}, institutionPlan = 'free') {
-  const role = normalizeRole(profile?.role);
+  const role = Boolean(profile?.is_super_admin) ? 'super_admin' : normalizeRole(profile?.role);
   const isSuper = Boolean(profile?.is_super_admin) || role === 'super_admin';
   const isCentral = role === 'central_admin';
-  const isDept = role === 'dept_admin' || role === 'admin' || Boolean(profile?.is_admin);
+  // Super admins can also have is_admin=true; keep role branches mutually exclusive.
+  const isDept = !isSuper && !isCentral && (role === 'dept_admin' || role === 'admin' || Boolean(profile?.is_admin));
   const plan = String(institutionPlan || 'free').toLowerCase();
 
   return {
@@ -104,17 +107,20 @@ function buildDashboardPermissions(profile = {}, institutionPlan = 'free') {
     isCentral,
     isDept,
     canAccessDashboard: isSuper || isCentral || isDept,
-    canManageStudents: isSuper || isDept,
-    canManageLecturers: isSuper || isDept,
-    canManageCourseUnits: isSuper || isDept,
-    canManageSessions: isSuper || isDept,
-    canManageTeam: isSuper || isDept,
-    canManageDepartments: isSuper || isCentral,
-    canManageDeptAdmins: isSuper || isCentral,
-    canManageBilling: isSuper || isCentral || isDept,
-    canManageApiKeys: isSuper || (isDept && plan === 'enterprise'),
+    canManageStudents: isDept && !isSuper,
+    canManageLecturers: isDept && !isSuper,
+    canManageCourseUnits: isDept && !isSuper,
+    canManageSessions: isDept && !isSuper,
+    canManageTeam: isDept && !isSuper,
+    canManageDepartments: isCentral && !isSuper,
+    canManageDeptAdmins: isCentral && !isSuper,
+    canViewBilling: (isCentral || isDept) && !isSuper,
+    canManageBilling: isCentral && !isSuper,
+    canManageApiKeys: (isDept && plan === 'enterprise') && !isSuper,
     canViewAnalytics: isSuper,
     canViewSecurity: isSuper,
+    canViewOverview: isSuper,
+    canBreakGlass: isSuper,
     canViewAudit: isSuper || isCentral || isDept,
     canViewInstitutions: isSuper,
   };
@@ -133,7 +139,10 @@ async function loadSessions() {
     '<div class="loading"><div class="spinner"></div>Loading sessions...</div>';
 
   try {
-    const instQuery = currentInstitutionId ? `?institution_id=${currentInstitutionId}` : '';
+    let instQuery = currentInstitutionId ? `?institution_id=${currentInstitutionId}` : '';
+    if (isDeptAdmin && currentDepartmentId) {
+      instQuery += (instQuery ? '&' : '?') + `department_id=${currentDepartmentId}`;
+    }
     const resp = await fetch(`${DAZZLING_URL}/admin/sessions${instQuery}`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
@@ -360,6 +369,8 @@ function switchTab(tab) {
   if (panel) panel.classList.add('active');
 
   if (tab === 'students')   loadStudents();
+  if (tab === 'overview')   loadOverview();
+  if (tab === 'breakglass') { /* form only */ }
   if (tab === 'superadmin') loadInstitutions();
   if (tab === 'team')       loadCoordinators();
   if (tab === 'lecturers')  { console.log('[dashboard] switchTab: lecturers'); loadLecturers(); }
@@ -681,13 +692,14 @@ async function initDashboard(session, isFreshLogin = false) {
   try {
     const { data: profile, error } = await client
       .from('profiles')
-      .select('institution_id, is_super_admin, role')
+      .select('institution_id, is_super_admin, role, department_id')
       .eq('id', session.user.id)
       .single();
 
     if (error) throw error;
 
     currentInstitutionId = profile?.institution_id || null;
+    currentDepartmentId  = profile?.department_id  || null;
     let permissions = buildDashboardPermissions(profile);
 
     try {
@@ -774,14 +786,36 @@ async function initDashboard(session, isFreshLogin = false) {
     tabs.appendChild(createSecureTab('tab-btn-aisummary', '🤖 AI Summary', 'aisummary', ''));
 
     if (isCentralAdmin) {
-      // ── Central Admin: departments, dept admins, billing, audit only ─────────
+      // ── Central Admin: institution-wide, all departments visible ─────────────
+      tabs.appendChild(createSecureTab('tab-btn-students',  '👥 Students',     'students',    ''));
+      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨🏫 Lecturers',   'lecturers',   ''));
+      if (currentInstitutionId) {
+        tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
+      }
+      tabs.appendChild(createSecureTab('tab-btn-sessions',  '📅 Sessions',     'sessions',    ''));
       if (currentPermissions?.canManageDepartments) {
         tabs.appendChild(createSecureTab('tab-btn-departments', '🏛️ Departments', 'departments', ''));
       }
       if (currentPermissions?.canManageDeptAdmins) {
         tabs.appendChild(createSecureTab('tab-btn-deptadmins', '👤 Dept Admins', 'deptadmins', ''));
       }
-      if (currentPermissions?.canManageBilling) {
+      if (currentPermissions?.canViewBilling) {
+        tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
+      }
+      if (currentPermissions?.canViewAudit) {
+        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
+      }
+
+    } else if (isDeptAdmin) {
+      // ── Dept Admin: same tabs as admin but queries filtered by department_id ──
+      tabs.appendChild(createSecureTab('tab-btn-students',  '👥 Students',   'students',  ''));
+      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨🏫 Lecturers', 'lecturers', ''));
+      if (currentInstitutionId) {
+        tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
+      }
+      tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
+      tabs.appendChild(createSecureTab('tab-btn-team',     'Team',         'team',     ''));
+      if (currentPermissions?.canViewBilling) {
         tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
       }
       if (currentPermissions?.canViewAudit) {
@@ -789,31 +823,11 @@ async function initDashboard(session, isFreshLogin = false) {
       }
 
     } else if (isSuperAdmin) {
-      // ── Super Admin: everything ───────────────────────────────────────────────
-      tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
-      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨‍🏫 Lecturers', 'lecturers', ''));
-      tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
-      tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
-      tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
+      // ── Super Admin: tiered access — aggregates + break-glass only ─────────────
+      document.getElementById('metrics').style.display = 'none';
 
-      const teamInstFilter = document.getElementById('filter-team-inst');
-      teamInstFilter.style.display = '';
-      fetch(`${DAZZLING_URL}/admin/institutions`, {
-        headers: { 'Authorization': `Bearer ${currentToken}` }
-      })
-      .then(r => r.json())
-      .then(data => {
-        const insts = data.institutions || [];
-        teamInstFilter.innerHTML = '<option value="">All Institutions</option>' +
-          insts.map(i => `<option value="${i.id}">${i.id} — ${i.name}</option>`).join('');
-      }).catch(() => {});
-
-      const aiInstWrap = document.getElementById('ai-institution-wrap');
-      if (aiInstWrap) aiInstWrap.style.display = '';
-
-      if (currentPermissions?.canManageApiKeys) {
-        tabs.appendChild(createSecureTab('tab-btn-apikeys', '⚙ API Keys', 'apikeys', 'dev-tab'));
-      }
+      tabs.appendChild(createSecureTab('tab-btn-overview', '📊 Overview', 'overview', 'superadmin-tab'));
+      tabs.appendChild(createSecureTab('tab-btn-breakglass', '🔓 Break-glass', 'breakglass', 'superadmin-tab'));
 
       const adminTabBtn = document.createElement('button');
       adminTabBtn.className = 'tab-btn superadmin-tab';
@@ -829,11 +843,12 @@ async function initDashboard(session, isFreshLogin = false) {
         tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
       }
       if (currentPermissions?.canViewAnalytics) {
-        tabs.appendChild(createSecureTab('tab-btn-analytics', '📊 Analytics', 'analytics', 'superadmin-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-analytics', '📈 Analytics', 'analytics', 'superadmin-tab'));
       }
 
     } else {
-      // ── Dept Admin (role='admin'): students, team, lecturers, units, billing ──
+      document.getElementById('metrics').style.display = '';
+      // ── Admin (role='admin'): institution-scoped, all departments ─────────────
       tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
       tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨‍🏫 Lecturers', 'lecturers', ''));
 
@@ -843,7 +858,7 @@ async function initDashboard(session, isFreshLogin = false) {
 
       tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
       tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
-      if (currentPermissions?.canManageBilling) {
+      if (currentPermissions?.canViewBilling) {
         tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
       }
       if (currentPermissions?.canManageApiKeys) {
@@ -864,9 +879,13 @@ async function initDashboard(session, isFreshLogin = false) {
       populateAIScopeUnits();
     }
 
-    switchTab('attendance');
-    await loadData();
-    if (isSuperAdmin) await fetchPendingCount();
+    if (isSuperAdmin) {
+      switchTab('overview');
+      await fetchPendingCount();
+    } else {
+      switchTab('attendance');
+      await loadData();
+    }
 
     document.getElementById('nav-user').textContent = session.user.email;
     document.getElementById('nav-superadmin').style.display = isSuperAdmin ? '' : 'none';
@@ -1065,6 +1084,7 @@ function downloadSummaryPDF() {
 
 // ── Pending count badge ────────────────────────────────────────────────────
 async function fetchPendingCount() {
+  if (!currentToken) return;
   try {
     const resp = await fetch(`${DAZZLING_URL}/admin/institutions?status=pending`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
@@ -1094,6 +1114,7 @@ async function logout() {
   localStorage.removeItem('lastActivity');
   currentToken         = null;
   currentInstitutionId = null;
+  currentDepartmentId  = null;
   isSuperAdmin         = false;
   isCentralAdmin       = false;
   allRecords           = [];
@@ -1103,8 +1124,9 @@ async function logout() {
   auditLoaded          = false;
 
   ['tab-btn-attendance','tab-btn-students','tab-btn-aisummary','tab-btn-team','tab-btn-units',
-   'tab-btn-billing','tab-btn-apikeys','tab-btn-superadmin',
-   'tab-btn-security','tab-btn-audit'].forEach(id => {
+   'tab-btn-billing','tab-btn-apikeys','tab-btn-superadmin','tab-btn-overview','tab-btn-breakglass',
+   'tab-btn-security','tab-btn-audit','tab-btn-analytics','tab-btn-lecturers','tab-btn-sessions',
+   'tab-btn-departments','tab-btn-deptadmins'].forEach(id => {
     document.getElementById(id)?.remove();
   });
 
@@ -1113,6 +1135,7 @@ async function logout() {
 
   document.getElementById('nav-superadmin').style.display = 'none';
   document.getElementById('nav-inst').style.display       = 'none';
+  document.getElementById('metrics').style.display        = '';
   document.getElementById('filter-inst').style.display    = '';
 
   // Reset the institution picker for next login
@@ -1209,6 +1232,94 @@ async function loadSecurityData() {
 
   try {
     const periodDays = document.getElementById('security-filter-period').value;
+
+    if (isSuperAdmin) {
+      const resp = await fetch(
+        `${DAZZLING_URL}/admin/super/security-summary?period_days=${encodeURIComponent(periodDays)}`,
+        { headers: { 'Authorization': `Bearer ${currentToken}` } }
+      );
+      if (!resp.ok) throw new Error('Failed to fetch security summary');
+      const data = await resp.json();
+      const rows = data.institutions || [];
+      allSecurityData = [];
+
+      const totalSpoofs  = rows.reduce((s, v) => s + (v.spoof || 0), 0);
+      const totalFailed  = rows.reduce((s, v) => s + (v.failed || 0), 0);
+      const totalSuccess = rows.reduce((s, v) => s + (v.success || 0), 0);
+      const flagged      = rows.filter(v => v.total > 0 && (v.spoof / v.total) >= 0.1).length;
+
+      document.getElementById('security-summary-grid').innerHTML = `
+        <div class="security-card red">
+          <div class="metric-label">Total Spoofs</div>
+          <div class="metric-value" style="color:var(--red)">${totalSpoofs}</div>
+          <div class="metric-sub">spoof attempts</div>
+        </div>
+        <div class="security-card orange">
+          <div class="metric-label">Total Failed</div>
+          <div class="metric-value" style="color:var(--orange)">${totalFailed}</div>
+          <div class="metric-sub">failed verifications</div>
+        </div>
+        <div class="security-card cyan">
+          <div class="metric-label">Successful</div>
+          <div class="metric-value" style="color:var(--cyan)">${totalSuccess}</div>
+          <div class="metric-sub">verified scans</div>
+        </div>
+        <div class="security-card yellow">
+          <div class="metric-label">Flagged Institutions</div>
+          <div class="metric-value" style="color:var(--yellow)">${flagged}</div>
+          <div class="metric-sub">spoof rate ≥ 10%</div>
+        </div>
+      `;
+
+      if (!rows.length) {
+        document.getElementById('security-table-wrap').innerHTML =
+          '<div class="loading">No security records found for this period.</div>';
+        return;
+      }
+
+      const maxSpoof = Math.max(...rows.map(v => v.spoof || 0), 1);
+      const tableRows = rows.map(v => {
+        const instId = v.institution_id || 'Unknown';
+        const spoofRate = v.total > 0 ? ((v.spoof / v.total) * 100).toFixed(1) : '0.0';
+        const isFlagged = v.total > 0 && (v.spoof / v.total) >= 0.1;
+        const barWidth  = Math.round(((v.spoof || 0) / maxSpoof) * 100);
+        const barColor  = isFlagged ? 'var(--red)' : v.spoof > 0 ? 'var(--orange)' : 'var(--muted)';
+        const flagMark  = isFlagged ? '<span class="flag-badge"></span>' : '';
+        const rowClass  = isFlagged ? 'flag-row' : '';
+        return `
+          <tr class="${rowClass}">
+            <td><strong>${flagMark}${escapeHtml(instId)}</strong></td>
+            <td style="color:var(--red);font-weight:600;">${v.spoof || 0}</td>
+            <td style="color:var(--orange)">${v.failed || 0}</td>
+            <td style="color:var(--cyan)">${v.success || 0}</td>
+            <td>
+              <div class="spoof-rate-row">
+                <div class="spoof-rate-bg">
+                  <div class="spoof-rate-fill" style="width:${barWidth}%;background:${barColor};"></div>
+                </div>
+                <span style="font-size:0.78rem;color:${isFlagged ? 'var(--red)' : 'var(--muted)'};min-width:38px;">${spoofRate}%</span>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+
+      document.getElementById('security-table-wrap').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Institution</th><th>Spoof Attempts</th><th>Failed Verifications</th>
+              <th>Successful Scans</th><th>Spoof Rate</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+        <div class="security-note">
+          Aggregate counts only. Use <strong>Break-glass</strong> for individual student records (logged).
+        </div>
+      `;
+      return;
+    }
+
     const resp = await fetch(`${API_URL}/admin/attendance-records?limit=5000`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
@@ -1379,6 +1490,10 @@ function toggleDrill(instId) {
 }
 
 function exportSecurityCSV() {
+  if (isSuperAdmin) {
+    showToast('Export disabled — use aggregate view or break-glass for details', 'error');
+    return;
+  }
   const records = allSecurityData.filter(r => r.verified === 'spoof' || r.verified === 'failed');
   if (!records.length) { showToast('No security records to export', 'error'); return; }
   const header = ['institution_id', 'verified', 'student_id', 'confidence', 'timestamp'];
@@ -1403,6 +1518,7 @@ const AUDIT_ACTION_LABELS = {
   'student.delete':            { label: 'Student Deleted',       color: '#ff5050' },
   'api_key.create':            { label: 'API Key Created',       color: '#00f5c4' },
   'api_key.revoke':            { label: 'API Key Revoked',       color: '#ff5050' },
+  'break_glass_access':        { label: '🔓 Break-glass Access', color: '#ff5050' },
   'institution.approve':       { label: 'Institution Approved',  color: '#00f5c4' },
   'institution.suspend':       { label: 'Institution Suspended', color: '#ff5050' },
   'attendance.verify':         { label: 'Attendance Verified',   color: '#4a9eff' },
@@ -1435,6 +1551,12 @@ function auditFormatMeta(meta) {
 }
 
 async function auditLoadPage(page = 1) {
+  if (!currentToken) {
+    document.getElementById('audit-table-wrap').innerHTML =
+      '<div class="loading" style="color:var(--muted)">Session not ready. Please wait a moment and try again.</div>';
+    return;
+  }
+
   auditCurrentPage = page;
   const wrap = document.getElementById('audit-table-wrap');
   wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Loading audit logs...</div>';
@@ -1501,6 +1623,7 @@ async function auditLoadPage(page = 1) {
 }
 
 async function auditLoadActionFilter() {
+  if (!currentToken) return;
   try {
     const res  = await fetch(`${DAZZLING_URL}/audit-logs/actions`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
@@ -1517,6 +1640,11 @@ async function auditLoadActionFilter() {
 }
 
 function auditExportCSV() {
+  if (!currentToken) {
+    showToast('Session not ready. Please try again in a moment.', 'error');
+    return;
+  }
+
   const action      = document.getElementById('audit-filter-action')?.value || '';
   const start       = document.getElementById('audit-filter-start')?.value || '';
   const end         = document.getElementById('audit-filter-end')?.value || '';
@@ -1552,7 +1680,10 @@ function auditExportCSV() {
 async function loadStudents() {
   if (!currentToken) return;
   const headers   = { 'Authorization': `Bearer ${currentToken}` };
-  const instQuery = currentInstitutionId ? `?institution_id=${currentInstitutionId}` : '';
+  let instQuery = currentInstitutionId ? `?institution_id=${currentInstitutionId}` : '';
+  if (isDeptAdmin && currentDepartmentId) {
+    instQuery += (instQuery ? '&' : '?') + `department_id=${currentDepartmentId}`;
+  }
 
   document.getElementById('students-table-wrap').innerHTML =
     '<div class="loading"><div class="spinner"></div>Loading students...</div>';
@@ -2354,6 +2485,12 @@ async function loadAnalytics() {
 
 // ── Load billing ───────────────────────────────────────────────────────────
 async function loadBilling() {
+  if (!currentPermissions?.canViewBilling && !currentPermissions?.canManageBilling) {
+    document.getElementById('billing-wrap').innerHTML =
+      '<div class="loading" style="color:var(--muted)">Billing access is not available for your role.</div>';
+    return;
+  }
+
   document.getElementById('billing-wrap').innerHTML =
     '<div class="loading"><div class="spinner"></div>Loading billing info...</div>';
   try {
@@ -2361,6 +2498,7 @@ async function loadBilling() {
     const inst = await resp.json();
     const plan     = inst.plans || 'trial';
     const daysLeft = inst.days_left ?? null;
+    const canEditBilling = Boolean(currentPermissions?.canManageBilling);
 
     const planLabels = {
       trial:      'Free Trial',
@@ -2379,7 +2517,44 @@ async function loadBilling() {
 
     let upgradeBlock = '';
 
-    if (plan === 'trial' || plan === 'starter') {
+    let invoices = [];
+    let invoicesError = null;
+    if (currentInstitutionId) {
+      try {
+        const invoiceResp = await fetch(`${DAZZLING_URL}/admin/billing/invoices/${currentInstitutionId}`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        if (invoiceResp.ok) {
+          invoices = await invoiceResp.json();
+        } else {
+          const err = await invoiceResp.json().catch(() => ({}));
+          invoicesError = err.detail || `HTTP ${invoiceResp.status}`;
+        }
+      } catch (e) {
+        invoicesError = e.message;
+      }
+    }
+
+    const invoiceRows = invoices.length
+      ? invoices.map(inv => {
+          const issued = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('en-GB') : '—';
+          const due = inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-GB') : '—';
+          return `
+            <tr>
+              <td>${escapeHtml(inv.invoice_id || inv.id || '—')}</td>
+              <td style="text-transform:capitalize;">${escapeHtml(inv.plan || '—')}</td>
+              <td>${escapeHtml(inv.currency || 'KES')} ${Number(inv.amount || 0).toLocaleString()}</td>
+              <td style="text-transform:capitalize;">${escapeHtml(inv.status || '—')}</td>
+              <td>${escapeHtml(issued)}</td>
+              <td>${escapeHtml(due)}</td>
+              <td>
+                <button class="btn-view" onclick="downloadInvoicePdf('${escapeJsString(inv.invoice_id || inv.id || '')}')">PDF</button>
+              </td>
+            </tr>`;
+        }).join('')
+      : `<tr><td colspan="7" style="color:var(--muted);">No invoices found.</td></tr>`;
+
+    if (canEditBilling && (plan === 'trial' || plan === 'starter')) {
       upgradeBlock = `
         <div class="upgrade-section">
           <div class="upgrade-title">Upgrade Your Plan</div>
@@ -2417,7 +2592,7 @@ async function loadBilling() {
             <a href="mailto:admin@faceattend.app?subject=Enterprise Plan" style="color:var(--cyan);">Contact us for Enterprise pricing →</a>
           </div>
         </div>`;
-    } else if (plan === 'growth') {
+    } else if (canEditBilling && plan === 'growth') {
       upgradeBlock = `
         <div class="upgrade-section">
           <p>You're on the <strong>Growth plan</strong> (up to 2,000 students).</p>
@@ -2426,7 +2601,7 @@ async function loadBilling() {
             Need 5,000+ students? <a href="mailto:admin@faceattend.app?subject=Enterprise Plan" style="color:var(--cyan);">Contact us for Enterprise →</a>
           </div>
         </div>`;
-    } else if (plan === 'pro') {
+    } else if (canEditBilling && plan === 'pro') {
       upgradeBlock = `
         <div class="upgrade-section">
           <p>You're on the <strong>Pro plan</strong> (up to 5,000 students).</p>
@@ -2434,12 +2609,18 @@ async function loadBilling() {
             Need 5,000+ students or multi-campus support? <a href="mailto:admin@faceattend.app?subject=Enterprise Plan" style="color:var(--cyan);">Contact us for Enterprise →</a>
           </div>
         </div>`;
-    } else if (plan === 'enterprise') {
+    } else if (canEditBilling && plan === 'enterprise') {
       upgradeBlock = `
         <div class="upgrade-section">
           <p style="color:var(--purple);">You're on the <strong>Enterprise plan</strong>.</p>
           <p style="margin-top:8px;font-size:0.85rem;color:var(--muted);">For billing inquiries or changes, contact us directly.</p>
           <button class="btn-contact-enterprise" onclick="window.open('mailto:admin@faceattend.app?subject=Enterprise Billing','_blank')">Contact Support</button>
+        </div>`;
+    } else if (!canEditBilling) {
+      upgradeBlock = `
+        <div class="upgrade-section">
+          <p>Read-only billing access for your role.</p>
+          <p style="margin-top:8px;font-size:0.85rem;color:var(--muted);">Plan changes and renewals are handled by a central admin.</p>
         </div>`;
     }
 
@@ -2448,10 +2629,21 @@ async function loadBilling() {
         <div class="billing-card cyan">
           <div class="metric-label">Current Plan</div>
           <div class="metric-value">${planLabels[plan] || plan}</div>
+          <div class="metric-sub" style="margin-top:8px;">${inst.subscription_expires_at ? `Next renewal: ${new Date(inst.subscription_expires_at).toLocaleDateString('en-GB')}` : (inst.trial_ends_at ? `Trial ends: ${new Date(inst.trial_ends_at).toLocaleDateString('en-GB')}` : 'No renewal date available')}</div>
         </div>
         ${trialBlock}
       </div>
-      ${upgradeBlock}`;
+      ${upgradeBlock}
+      <div class="billing-section" style="margin-top:24px;">
+        <div class="upgrade-title" style="margin-bottom:12px;">Invoice History</div>
+        ${invoicesError ? `<div class="loading" style="color:var(--red)">Failed to load invoices: ${escapeHtml(invoicesError)}</div>` : `
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Invoice</th><th>Plan</th><th>Amount</th><th>Status</th><th>Issued</th><th>Due</th><th>PDF</th></tr></thead>
+              <tbody>${invoiceRows}</tbody>
+            </table>
+          </div>`}
+      </div>`;
   } catch (e) {
     document.getElementById('billing-wrap').innerHTML =
       '<div class="loading" style="color:var(--red)">Failed to load billing info.</div>';
@@ -2459,6 +2651,11 @@ async function loadBilling() {
 }
 
 async function handleUpgrade(plan) {
+  if (!currentPermissions?.canManageBilling) {
+    showToast('Billing changes are restricted to central admins.', 'error');
+    return;
+  }
+
   const { data: { user } } = await client.auth.getUser();
   if (!user) return alert('Please log in first.');
 
@@ -2491,6 +2688,31 @@ async function handleUpgrade(plan) {
     }
   } catch (e) {
     alert('Something went wrong. Please try again or contact admin@faceattend.app');
+  }
+}
+
+async function downloadInvoicePdf(invoiceId) {
+  if (!invoiceId || !currentInstitutionId || !currentToken) return;
+
+  try {
+    const resp = await fetch(`${DAZZLING_URL}/admin/billing/invoices/${currentInstitutionId}/${encodeURIComponent(invoiceId)}/pdf`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice_${invoiceId.slice(0, 8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast(`Failed to download invoice PDF: ${e.message}`, 'error');
   }
 }
 
@@ -2650,6 +2872,7 @@ async function sendDeptAdminInvite() {
     formData.append('full_name', name);
     formData.append('email', email);
     formData.append('role', 'dept_admin');
+    if (deptId) formData.append('department_id', deptId);
 
     const resp = await fetch(`${DAZZLING_URL}/invite-coordinator`, {
       method: 'POST',
@@ -2926,6 +3149,138 @@ async function confirmRemoveCoord() {
     if (resp.ok) { showToast('Coordinator removed', 'success'); await loadCoordinators(); }
     else { const err = await resp.json().catch(() => ({})); showToast(`Failed: ${err.detail || 'Unknown error'}`, 'error'); }
   } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+}
+
+// ── Load overview (super admin — aggregate only) ───────────────────────────
+async function loadOverview() {
+  if (!currentToken || !isSuperAdmin) return;
+
+  document.getElementById('overview-table-wrap').innerHTML =
+    '<div class="loading"><div class="spinner"></div>Loading overview...</div>';
+
+  try {
+    const resp = await fetch(`${DAZZLING_URL}/admin/super/overview`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const institutions = data.institutions || [];
+
+    if (!institutions.length) {
+      document.getElementById('overview-table-wrap').innerHTML =
+        '<div class="loading">No institutions found.</div>';
+      return;
+    }
+
+    const rows = institutions.map(inst => {
+      const trial = inst.trial_ends_at
+        ? new Date(inst.trial_ends_at).toLocaleDateString('en-GB')
+        : '—';
+      return `<tr>
+        <td><strong>${escapeHtml(inst.institution_id || '—')}</strong></td>
+        <td>${escapeHtml(inst.institution_name || '—')}</td>
+        <td>${inst.active_students ?? 0}</td>
+        <td>${inst.lecturers ?? 0}</td>
+        <td>${inst.sessions_this_month ?? 0}</td>
+        <td style="text-transform:capitalize;">${escapeHtml(inst.plan || '—')}</td>
+        <td style="text-transform:capitalize;">${escapeHtml(inst.payment_status || '—')}</td>
+        <td style="color:var(--muted);font-size:0.8rem;">${trial}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('overview-table-wrap').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Name</th><th>Students</th><th>Lecturers</th>
+            <th>Sessions (month)</th><th>Plan</th><th>Status</th><th>Trial ends</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="table-footer">${institutions.length} institution${institutions.length !== 1 ? 's' : ''}</div>`;
+  } catch (e) {
+    document.getElementById('overview-table-wrap').innerHTML =
+      `<div class="loading" style="color:var(--red)">Failed to load: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function submitBreakGlass() {
+  if (!currentToken || !isSuperAdmin) return;
+
+  const studentId = document.getElementById('breakglass-student-id')?.value?.trim() || '';
+  const reason    = document.getElementById('breakglass-reason')?.value?.trim() || '';
+  const errEl     = document.getElementById('breakglass-error');
+  const btn       = document.getElementById('breakglass-submit-btn');
+  const resultWrap = document.getElementById('breakglass-result-wrap');
+
+  errEl.style.display = 'none';
+  resultWrap.innerHTML = '';
+
+  if (!studentId) {
+    errEl.textContent = 'Student ID is required.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (reason.length < 8) {
+    errEl.textContent = 'Reason must be at least 8 characters.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Requesting...';
+
+  try {
+    const resp = await fetch(`${DAZZLING_URL}/admin/super/break-glass`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ student_id: studentId, reason }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const detail = data.detail;
+      throw new Error(typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : `HTTP ${resp.status}`));
+    }
+
+    const student = data.student || {};
+    const records = student.attendance_records || [];
+    const recordRows = (Array.isArray(records) ? records : []).slice(0, 50).map(r => {
+      const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('en-GB', { timeZone: 'Africa/Nairobi' }) : '—';
+      return `<tr>
+        <td>${escapeHtml(r.verified || '—')}</td>
+        <td>${escapeHtml(r.confidence != null ? (r.confidence * 100).toFixed(1) + '%' : '—')}</td>
+        <td style="color:var(--muted);font-size:0.8rem;">${ts}</td>
+      </tr>`;
+    }).join('');
+
+    resultWrap.innerHTML = `
+      <div class="billing-card cyan" style="margin-bottom:16px;">
+        <div class="metric-label">Student</div>
+        <div class="metric-value" style="font-size:1.1rem;">${escapeHtml(student.full_name || student.student_id || studentId)}</div>
+        <div class="metric-sub">ID: ${escapeHtml(student.student_id || studentId)} · Institution: ${escapeHtml(student.institution_id || '—')}</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Status</th><th>Confidence</th><th>Time (EAT)</th></tr></thead>
+          <tbody>${recordRows || '<tr><td colspan="3">No attendance records</td></tr>'}</tbody>
+        </table>
+        ${records.length > 50 ? '<div class="table-footer">Showing first 50 records</div>' : ''}
+      </div>`;
+    showToast('Break-glass access logged', 'success');
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Request access';
+  }
 }
 
 // ── Load institutions ──────────────────────────────────────────────────────

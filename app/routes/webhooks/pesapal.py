@@ -4,9 +4,9 @@ import uuid
 import hmac
 import hashlib
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from app.dep import supabase, supabase_admin
+from app.dep import supabase, supabase_admin, check_admin, _bool_flag
 
 router = APIRouter(prefix="/api/cart", tags=["payments"])
 
@@ -99,7 +99,18 @@ class CartRequest(BaseModel):
 
 
 @router.post("/create-cart")
-async def create_cart(payload: CartRequest):
+async def create_cart(payload: CartRequest, user=Depends(check_admin)):
+    p = supabase_admin.table("profiles") \
+        .select("institution_id, is_super_admin, role") \
+        .eq("id", user.id).single().execute().data or {}
+    role = p.get("role", "")
+    is_super = _bool_flag(p.get("is_super_admin")) or role == "super_admin"
+    is_central = role == "central_admin"
+    if not (is_super or is_central):
+        raise HTTPException(status_code=403, detail="central_admin or super_admin required")
+    if not is_super and p.get("institution_id") != payload.institution_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     plan_key = payload.plan.lower()
 
     if plan_key == "enterprise":

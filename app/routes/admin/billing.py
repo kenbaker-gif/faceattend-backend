@@ -31,9 +31,21 @@ def _check_institution_access(user, institution_id: str):
     return is_super
 
 
+def _require_central_admin(user, institution_id: str):
+    """Restrict to super_admin or central_admin only. dept_admin cannot mutate billing."""
+    p = _get_profile(user)
+    role = p.get("role", "")
+    is_super = _bool_flag(p.get("is_super_admin")) or role == "super_admin"
+    is_central = role == "central_admin"
+    if not (is_super or is_central):
+        raise HTTPException(status_code=403, detail="central_admin or super_admin required")
+    if not is_super and p.get("institution_id") != institution_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
 @router.post("/upgrade", response_model=PlanUpgradeResponse)
 async def upgrade_plan(request: PlanUpgradeRequest, user=Depends(check_admin)):
-    _check_institution_access(user, request.institution_id)
+    _require_central_admin(user, request.institution_id)
 
     inst_result = supabase_admin.table("institutions").select("*").eq("id", request.institution_id).execute()
     if not inst_result.data:
@@ -90,7 +102,7 @@ async def upgrade_plan(request: PlanUpgradeRequest, user=Depends(check_admin)):
 
 @router.get("/proration/{institution_id}")
 async def calculate_proration(institution_id: str, new_plan: str, user=Depends(check_admin)):
-    _check_institution_access(user, institution_id)
+    _require_central_admin(user, institution_id)
 
     inst_result = supabase_admin.table("institutions").select("*").eq("id", institution_id).execute()
     if not inst_result.data:
@@ -109,7 +121,7 @@ async def calculate_proration(institution_id: str, new_plan: str, user=Depends(c
 
 @router.post("/invoices", response_model=Invoice)
 async def create_invoice(request: InvoiceCreate, user=Depends(check_admin)):
-    _check_institution_access(user, request.institution_id)
+    _require_central_admin(user, request.institution_id)
 
     invoice = BillingService.generate_invoice(
         request.institution_id, request.plan,
@@ -155,7 +167,7 @@ async def get_invoices(institution_id: str, user=Depends(check_admin)):
 
 @router.get("/payment-history/{institution_id}", response_model=List[PaymentHistory])
 async def get_payment_history(institution_id: str, user=Depends(check_admin)):
-    _check_institution_access(user, institution_id)
+    _require_central_admin(user, institution_id)
 
     result = supabase_admin.table("payments").select("*") \
         .eq("institution_id", institution_id).order("payment_date", desc=True).execute()
