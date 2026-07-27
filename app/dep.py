@@ -64,6 +64,8 @@ def build_admin_context(profile: dict | None) -> dict:
     is_admin = _bool_flag(profile.get("is_admin"))
     is_super_admin = _bool_flag(profile.get("is_super_admin"))
     is_super = is_super_admin or role == "super_admin"
+    if is_super:
+        role = "super_admin"
     is_central_admin = role == "central_admin"
     is_dept_admin = role in {"dept_admin", "admin"}
 
@@ -93,11 +95,16 @@ def can_access_feature(profile: dict | None, feature: str, institution_plan: str
     if feature_name == "billing":
         return ctx["is_super"] or ctx["is_central_admin"] or ctx["is_dept_admin"]
 
-    if feature_name in {"students", "lecturers", "course_units", "sessions", "team", "audit"}:
-        return ctx["is_super"] or ctx["is_dept_admin"]
+    if feature_name in {"students", "lecturers", "course_units", "sessions", "team"}:
+        if ctx["is_super"]:
+            return False
+        return ctx["is_dept_admin"] or ctx["is_central_admin"]
+
+    if feature_name == "audit":
+        return ctx["is_super"] or ctx["is_dept_admin"] or ctx["is_central_admin"]
 
     if feature_name in {"attendance", "ai_summary"}:
-        return ctx["can_access_dashboard"]
+        return ctx["can_access_dashboard"] and not ctx["is_super"]
 
     return ctx["can_access_dashboard"]
 

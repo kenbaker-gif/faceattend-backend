@@ -160,23 +160,30 @@ async def list_students(
 ):
     try:
         profile_resp = supabase_admin.table("profiles") \
-            .select("institution_id, is_super_admin, role") \
+            .select("institution_id, is_super_admin, role, department_id") \
             .eq("id", user.id).single().execute()
 
-        is_super_admin = _bool_flag(profile_resp.data.get("is_super_admin") if profile_resp.data else None)
-        role = profile_resp.data.get("role", "") if profile_resp.data else ""
-        user_institution_id = profile_resp.data.get("institution_id") if profile_resp.data else None
+        profile = profile_resp.data or {}
+        role = profile.get("role", "")
+        is_super = _bool_flag(profile.get("is_super_admin")) or role == "super_admin"
+        user_institution_id = profile.get("institution_id")
+        user_department_id = profile.get("department_id")
 
-        is_super = is_super_admin or role == "super_admin"
+        if is_super:
+            raise HTTPException(
+                status_code=403,
+                detail="Super admins use /admin/super/overview and break-glass for student access.",
+            )
 
-        if not is_super and not user_institution_id:
+        if not user_institution_id:
             raise HTTPException(status_code=403, detail="Institution admin requires institution_id in profile")
 
         query = supabase_admin.table("students").select("*").order("name")
 
-        if is_super:
-            if institution_id:
-                query = query.eq("institution_id", institution_id)
+        if role == "dept_admin":
+            query = query.eq("institution_id", user_institution_id)
+            if user_department_id:
+                query = query.eq("department_id", user_department_id)
         else:
             query = query.eq("institution_id", user_institution_id)
 
@@ -202,7 +209,10 @@ async def delete_student(
         is_super = _bool_flag(profile.get("is_super_admin")) or profile.get("role", "") == "super_admin"
         user_institution_id = profile.get("institution_id")
 
-        if not is_super and not user_institution_id:
+        if is_super:
+            raise HTTPException(status_code=403, detail="Super admins cannot delete students from the dashboard.")
+
+        if not user_institution_id:
             raise HTTPException(status_code=403, detail="Institution admin requires institution_id in profile")
 
         resp = supabase_admin.table("students").select("institution_id") \

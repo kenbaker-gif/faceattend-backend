@@ -19,9 +19,32 @@ class BillingDashboard {
         await this.loadInvoices();
     }
 
+    async getAuthToken() {
+        if (window.supabase && typeof sbClient !== 'undefined' && sbClient.auth) {
+            const { data } = await sbClient.auth.getSession();
+            const token = data?.session?.access_token;
+            if (token) return token;
+        }
+
+        try {
+            const stored = localStorage.getItem('supabase.auth.token');
+            if (!stored) return null;
+            const parsed = JSON.parse(stored);
+            return parsed?.currentSession?.access_token ?? parsed?.session?.access_token ?? parsed?.access_token ?? null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async getAuthHeaders() {
+        const token = await this.getAuthToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    }
+
     async loadCurrentPlan() {
         try {
-            const response = await fetch(`/admin/institutions/${this.institutionId}`);
+            const headers = await this.getAuthHeaders();
+            const response = await fetch(`/admin/institutions/${this.institutionId}`, { headers });
             const data = await response.json();
             this.currentPlan = {
                 name: data.plan || 'free',
@@ -38,7 +61,8 @@ class BillingDashboard {
 
     async loadStudentCount() {
         try {
-            const response = await fetch(`/admin/students?institution_id=${this.institutionId}`);
+            const headers = await this.getAuthHeaders();
+            const response = await fetch(`/admin/students?institution_id=${this.institutionId}`, { headers });
             const data = await response.json();
             this.studentCount = data.length || 0;
         } catch (error) {
@@ -48,7 +72,8 @@ class BillingDashboard {
 
     async loadAutoRenewalStatus() {
         try {
-            const response = await fetch(`/admin/auto-renewal/status/${this.institutionId}`);
+            const headers = await this.getAuthHeaders();
+            const response = await fetch(`/admin/auto-renewal/status/${this.institutionId}`, { headers });
             this.autoRenewalStatus = await response.json();
         } catch (error) {
             console.error('Failed to load auto-renewal status:', error);
@@ -86,9 +111,10 @@ class BillingDashboard {
 
     async toggleAutoRenewal(enabled) {
         try {
+            const headers = { 'Content-Type': 'application/json', ...(await this.getAuthHeaders()) };
             const response = await fetch('/admin/auto-renewal/toggle', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     institution_id: this.institutionId,
                     enabled: enabled,
@@ -278,7 +304,8 @@ class BillingDashboard {
 
     async getProration(newPlan) {
         try {
-            const response = await fetch(`/admin/billing/proration/${this.institutionId}?new_plan=${newPlan}`);
+            const headers = await this.getAuthHeaders();
+            const response = await fetch(`/admin/billing/proration/${this.institutionId}?new_plan=${newPlan}`, { headers });
             return await response.json();
         } catch (error) {
             console.error('Failed to get proration:', error);
@@ -288,9 +315,10 @@ class BillingDashboard {
 
     async confirmUpgrade(newPlan) {
         try {
+            const headers = { 'Content-Type': 'application/json', ...(await this.getAuthHeaders()) };
             const response = await fetch('/admin/billing/upgrade', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     institution_id: this.institutionId,
                     new_plan: newPlan
@@ -334,7 +362,8 @@ class BillingDashboard {
 
     async loadInvoices() {
         try {
-            const response = await fetch(`/admin/billing/invoices/${this.institutionId}`);
+            const headers = await this.getAuthHeaders();
+            const response = await fetch(`/admin/billing/invoices/${this.institutionId}`, { headers });
             const invoices = await response.json();
             this.renderInvoices(invoices);
         } catch (error) {
@@ -366,7 +395,7 @@ class BillingDashboard {
                             <td>${new Date(inv.issue_date).toLocaleDateString()}</td>
                             <td>${new Date(inv.due_date).toLocaleDateString()}</td>
                             <td><span class="invoice-status ${inv.status}">${inv.status}</span></td>
-                            <td><a href="/admin/billing/invoices/${this.institutionId}/${inv.invoice_id}/pdf" target="_blank" class="download-btn">📄 PDF</a></td>
+                            <td><a href="#" onclick="billing.downloadInvoicePDF('${inv.invoice_id}'); return false;" class="download-btn">📄 PDF</a></td>
                         </tr>
                     `).join('') : '<tr><td colspan="7" style="text-align: center;">No invoices yet</td></tr>'}
                 </tbody>
@@ -374,6 +403,28 @@ class BillingDashboard {
         `;
 
         document.getElementById('invoices-container').innerHTML = html;
+    }
+
+    async downloadInvoicePDF(invoiceId) {
+        try {
+            const headers = await this.getAuthHeaders();
+            const response = await fetch(`/admin/billing/invoices/${this.institutionId}/${invoiceId}/pdf`, { headers });
+            if (!response.ok) {
+                throw new Error(`Failed to download PDF: ${response.status} ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `invoice_${invoiceId.slice(0, 8)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Failed to download invoice PDF:', error);
+            alert('Could not download invoice PDF. Please sign in again or refresh the page.');
+        }
     }
 
     showRenewModal() {

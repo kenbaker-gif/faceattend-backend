@@ -194,7 +194,7 @@ async def get_my_permissions(current_user = Depends(verify_supabase_token)):
         .single() \
         .execute()
 
-    profile = profile_resp.data[0] if profile_resp.data else None
+    profile = profile_resp.data or None
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -207,7 +207,7 @@ async def get_my_permissions(current_user = Depends(verify_supabase_token)):
             .single() \
             .execute()
         if inst_resp.data:
-            raw_plan = inst_resp.data[0].get("plan") or inst_resp.data[0].get("plans") or "free"
+            raw_plan = inst_resp.data.get("plan") or inst_resp.data.get("plans") or "free"
             institution_plan = str(raw_plan).lower() if raw_plan else "free"
 
     ctx = build_admin_context(profile)
@@ -215,6 +215,8 @@ async def get_my_permissions(current_user = Depends(verify_supabase_token)):
         "user_id": current_user.id,
         "email": current_user.email,
         "institution_id": institution_id,
+        "is_admin": bool(profile.get("is_admin")),
+        "is_super_admin": bool(profile.get("is_super_admin")),
         "role": ctx["role"],
         "plan": institution_plan,
         "permissions": {

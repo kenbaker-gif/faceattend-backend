@@ -488,6 +488,36 @@
         <div class="loading"><div class="spinner"></div>Loading billing info...</div>
       </div>
     </div>
+    <!-- Overview Tab (super admin — aggregate only) -->
+    <div class="tab-panel" id="tab-overview">
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">
+        Institution-level aggregates. Individual student data requires break-glass access with a logged reason.
+      </p>
+      <div class="filters" style="margin-bottom:20px;">
+        <button class="btn-refresh" onclick="loadOverview()">↺ Refresh</button>
+      </div>
+      <div class="table-wrap" id="overview-table-wrap">
+        <div class="loading"><div class="spinner"></div>Loading overview...</div>
+      </div>
+    </div>
+
+    <!-- Break-glass Tab (super admin) -->
+    <div class="tab-panel" id="tab-breakglass">
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">
+        Access a specific student's record for support or investigation. Every lookup is written to audit logs before data is returned.
+      </p>
+      <div class="billing-card" style="max-width:520px;margin-bottom:24px;">
+        <div class="metric-label">Student lookup</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+          <input type="text" id="breakglass-student-id" placeholder="Student ID" style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);"/>
+          <textarea id="breakglass-reason" rows="3" placeholder="Reason for access (min 8 characters)" style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);resize:vertical;"></textarea>
+          <button class="btn-upgrade" id="breakglass-submit-btn" onclick="submitBreakGlass()" style="width:auto;padding:10px 20px;">Request access</button>
+          <div id="breakglass-error" class="error-msg" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="breakglass-result-wrap"></div>
+    </div>
+
     <!-- Analytics Tab -->
     <div class="tab-panel" id="tab-analytics">
       <div id="analytics-wrap">
@@ -565,6 +595,6 @@
 
 <script src="/static/js/supabase.min.js"></script>
 <script src="/static/js/auth-link.js"></script>
-<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/dashboard.js?v=20260716"></script>
 </body>
 </html>

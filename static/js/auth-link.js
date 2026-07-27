@@ -6,12 +6,19 @@ const FACEATTEND_SUPABASE_URL = 'https://xrlsltunfgjxooyyrora.supabase.co';
 const FACEATTEND_SUPABASE_KEY = 'sb_publishable_qRH90RKcsglvtumJPWDxng_ju9Lploh';
 
 function createFaceAttendAuthClient() {
-  return supabase.createClient(FACEATTEND_SUPABASE_URL, FACEATTEND_SUPABASE_KEY, {
+  if (window.__faceattendSupabaseAuthClient) {
+    return window.__faceattendSupabaseAuthClient;
+  }
+
+  const client = supabase.createClient(FACEATTEND_SUPABASE_URL, FACEATTEND_SUPABASE_KEY, {
     auth: {
       detectSessionInUrl: true,
       persistSession: true,
     },
   });
+
+  window.__faceattendSupabaseAuthClient = client;
+  return client;
 }
 
 function getHashParams() {

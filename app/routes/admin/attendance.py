@@ -78,7 +78,13 @@ async def get_attendance_records(
         user_institution_id = profile_resp.data.get("institution_id") if profile_resp.data else None
         is_super = is_super_admin or role == "super_admin"
 
-        if not is_super and not user_institution_id:
+        if is_super:
+            raise HTTPException(
+                status_code=403,
+                detail="Super admins use /admin/super/security-summary for aggregate security data.",
+            )
+
+        if not user_institution_id:
             raise HTTPException(
                 status_code=403,
                 detail="Institution admin requires institution_id in profile",
@@ -89,13 +95,8 @@ async def get_attendance_records(
             .select("*, course_units(name)")
             .order("timestamp", desc=True)
             .limit(limit)
+            .eq("institution_id", user_institution_id)
         )
-
-        if is_super:
-            if institution_id:
-                query = query.eq("institution_id", institution_id)
-        else:
-            query = query.eq("institution_id", user_institution_id)
 
         rows = query.execute().data or []
 

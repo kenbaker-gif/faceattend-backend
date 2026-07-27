@@ -27,12 +27,13 @@ async def get_sessions(
     """
     try:
         profile_resp = supabase_admin.table("profiles") \
-            .select("institution_id, is_super_admin, role") \
+            .select("institution_id, is_super_admin, role, department_id") \
             .eq("id", user.id).single().execute()
 
         is_super_admin = _bool_flag(profile_resp.data.get("is_super_admin") if profile_resp.data else None)
         role = profile_resp.data.get("role", "") if profile_resp.data else ""
         user_institution_id = profile_resp.data.get("institution_id") if profile_resp.data else None
+        user_department_id = profile_resp.data.get("department_id") if profile_resp.data else None
         is_super = is_super_admin or role == "super_admin"
 
         if not is_super and not user_institution_id:
@@ -51,6 +52,15 @@ async def get_sessions(
         if is_super:
             if institution_id:
                 query = query.eq("institution_id", institution_id)
+        elif role == "dept_admin":
+            query = query.eq("institution_id", user_institution_id)
+            if user_department_id:
+                query = query.eq("department_id", user_department_id)
+            else:
+                logger.warning(
+                    "dept_admin profile %s is missing department_id; falling back to institution scope",
+                    user.id,
+                )
         else:
             query = query.eq("institution_id", user_institution_id)
 

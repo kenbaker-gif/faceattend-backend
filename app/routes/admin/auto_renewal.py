@@ -16,6 +16,19 @@ def _check_institution_access(user, institution_id: str):
         raise HTTPException(status_code=403, detail="Access denied")
 
 
+def _require_central_admin(user, institution_id: str):
+    p = supabase_admin.table("profiles") \
+        .select("institution_id, is_super_admin, role") \
+        .eq("id", user.id).single().execute().data or {}
+    role = p.get("role", "")
+    is_super = _bool_flag(p.get("is_super_admin")) or role == "super_admin"
+    is_central = role == "central_admin"
+    if not (is_super or is_central):
+        raise HTTPException(status_code=403, detail="central_admin or super_admin required")
+    if not is_super and p.get("institution_id") != institution_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
 class AutoRenewalToggle(BaseModel):
     institution_id: str
     enabled: bool
@@ -24,7 +37,7 @@ class AutoRenewalToggle(BaseModel):
 
 @router.post("/toggle")
 async def toggle_auto_renewal(request: AutoRenewalToggle, user=Depends(check_admin)):
-    _check_institution_access(user, request.institution_id)
+    _require_central_admin(user, request.institution_id)
 
     inst = supabase_admin.table("institutions").select("*").eq("id", request.institution_id).execute()
     if not inst.data:
