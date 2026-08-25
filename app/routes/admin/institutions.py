@@ -132,6 +132,7 @@ async def register_institution(
         supabase_admin.table("profiles").insert({
             "id": user_id,
             "full_name": admin_full_name.strip(),
+            "email": email,
             "is_admin": True,
             "institution_id": inst_id,
             "role": "central_admin",
