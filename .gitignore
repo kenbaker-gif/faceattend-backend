@@ -38,6 +38,12 @@ scripts/
 .cursor/
 .DS_Store
 Thumbs.db
+.do
+.github
+.vscode
+
 
 # Excluded modules
 app/Enterprise
+
+audit

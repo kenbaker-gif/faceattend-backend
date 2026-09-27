@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.history.replaceState(null, null, window.location.href);
   }
 
+  FaceAttendTheme.initSwitcher();
   initSignupForm();
   initMobileNav();
   initScrollHint();

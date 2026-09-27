@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FaceAttend — Dashboard</title>
 <link rel="icon" type="image/x-icon" href="/static/admin_favicon.ico">
-<link rel="stylesheet" href="/static/css/dashboard.css">
+<meta name="color-scheme" content="light dark"/>
+<script src="/static/js/theme.js?v=20260801.1"></script>
+<link rel="stylesheet" href="/static/css/dashboard.css?v=20260801.1">
 </head>
 <body>
 <div class="grid-bg"></div>
@@ -271,6 +273,11 @@
   <nav>
     <div class="nav-logo">Face<span>Attend</span> <span style="color:var(--muted);font-size:0.75rem;font-weight:400;margin-left:8px;">DASHBOARD</span></div>
     <div class="nav-right">
+      <select id="theme-select" class="theme-select" aria-label="Theme">
+        <option value="system">Auto</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
       <span class="nav-superadmin" id="nav-superadmin" style="display:none">⚡ Super Admin</span>
       <span class="nav-inst" id="nav-inst" style="display:none"></span>
       <span class="nav-user" id="nav-user"></span>
@@ -596,5 +603,10 @@
 <script src="/static/js/supabase.min.js"></script>
 <script src="/static/js/auth-link.js"></script>
 <script src="/static/js/dashboard.js?v=20260716"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    FaceAttendTheme.initSwitcher();
+  });
+</script>
 </body>
 </html>
