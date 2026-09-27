@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
@@ -44,6 +45,7 @@ from app.utils.mvp_sync import MVP_URL
 from app.middleware.security import SecurityHeadersMiddleware
 
 scheduler = create_scheduler()
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 @asynccontextmanager
 async def lifespan(app):
@@ -58,7 +60,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
