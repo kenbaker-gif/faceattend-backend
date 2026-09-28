@@ -55,6 +55,96 @@ let courseUnitsCache     = [];
 let coordinatorsData     = [];
 let auditLoaded          = false;
 
+const ROLE_CONFIG = {
+  super_admin: {
+    label: 'Super admin', roleIcon: 'icon-shield', scope: 'aggregate',
+    navItems: [{ id: 'overview', label: 'Overview', icon: 'icon-chart', paneId: 'tab-overview' }, { id: 'breakglass', label: 'Break-glass', icon: 'icon-shield', paneId: 'tab-breakglass' }, { id: 'superadmin', label: 'Institutions', icon: 'icon-building', paneId: 'tab-superadmin' }, { id: 'security', label: 'Security', icon: 'icon-shield', paneId: 'tab-security' }, { id: 'analytics', label: 'Analytics', icon: 'icon-chart', paneId: 'tab-analytics' }, { id: 'audit', label: 'Audit logs', icon: 'icon-chart', paneId: 'tab-audit' }],
+    kpis: [{ label: 'Institutions', dataKey: 'institutions' }, { label: 'Security events', dataKey: 'securityEvents' }],
+    attentionRules: ['pendingInstitutions'], defaultPane: 'overview',
+  },
+  central_admin: {
+    label: 'Central administrator', roleIcon: 'icon-building', scope: 'institution',
+    navItems: [{ id: 'attendance', label: 'Attendance', icon: 'icon-calendar', paneId: 'tab-attendance' }, { id: 'students', label: 'Students', icon: 'icon-users', paneId: 'tab-students' }, { id: 'lecturers', label: 'Lecturers', icon: 'icon-users', paneId: 'tab-lecturers' }, { id: 'units', label: 'Course units', icon: 'icon-book', paneId: 'tab-units' }, { id: 'sessions', label: 'Sessions', icon: 'icon-calendar', paneId: 'tab-sessions' }, { id: 'departments', label: 'Departments', icon: 'icon-building', paneId: 'tab-departments' }, { id: 'deptadmins', label: 'Department admins', icon: 'icon-users', paneId: 'tab-deptadmins' }, { id: 'billing', label: 'Billing', icon: 'icon-chart', paneId: 'tab-billing' }, { id: 'audit', label: 'Audit logs', icon: 'icon-chart', paneId: 'tab-audit' }],
+    kpis: [{ label: 'Verified attendance', dataKey: 'verified' }, { label: 'Enrolled students', dataKey: 'students' }, { label: 'Exceptions', dataKey: 'exceptions' }],
+    attentionRules: ['exceptions', 'pendingInvites'], defaultPane: 'attendance',
+  },
+  dept_admin: {
+    label: 'Department administrator', roleIcon: 'icon-building', scope: 'department',
+    navItems: [{ id: 'attendance', label: 'Attendance', icon: 'icon-calendar', paneId: 'tab-attendance' }, { id: 'students', label: 'Students', icon: 'icon-users', paneId: 'tab-students' }, { id: 'lecturers', label: 'Lecturers', icon: 'icon-users', paneId: 'tab-lecturers' }, { id: 'units', label: 'Course units', icon: 'icon-book', paneId: 'tab-units' }, { id: 'sessions', label: 'Sessions', icon: 'icon-calendar', paneId: 'tab-sessions' }, { id: 'team', label: 'Team', icon: 'icon-users', paneId: 'tab-team' }, { id: 'billing', label: 'Billing', icon: 'icon-chart', paneId: 'tab-billing' }, { id: 'audit', label: 'Audit logs', icon: 'icon-chart', paneId: 'tab-audit' }],
+    kpis: [{ label: 'Verified attendance', dataKey: 'verified' }, { label: 'Enrolled students', dataKey: 'students' }, { label: 'Exceptions', dataKey: 'exceptions' }],
+    attentionRules: ['exceptions', 'pendingInvites'], defaultPane: 'attendance',
+  },
+  coordinator: {
+    label: 'Coordinator', roleIcon: 'icon-users', scope: 'department',
+    navItems: [{ id: 'attendance', label: 'Attendance', icon: 'icon-calendar', paneId: 'tab-attendance' }, { id: 'students', label: 'Students', icon: 'icon-users', paneId: 'tab-students' }, { id: 'sessions', label: 'Sessions', icon: 'icon-calendar', paneId: 'tab-sessions' }], kpis: [{ label: 'Verified attendance', dataKey: 'verified' }, { label: 'Exceptions', dataKey: 'exceptions' }],
+    attentionRules: ['exceptions'], defaultPane: 'attendance',
+  },
+  lecturer: {
+    label: 'Lecturer', roleIcon: 'icon-camera', scope: 'course unit',
+    navItems: [{ id: 'attendance', label: 'Attendance', icon: 'icon-calendar', paneId: 'tab-attendance' }, { id: 'sessions', label: 'Sessions', icon: 'icon-calendar', paneId: 'tab-sessions' }], kpis: [{ label: 'Verified attendance', dataKey: 'verified' }],
+    attentionRules: ['exceptions'], defaultPane: 'attendance',
+  },
+};
+
+const TAB_PRESENTATION = {
+  attendance: ['Attendance', 'icon-calendar'], students: ['Students', 'icon-users'],
+  aisummary: ['AI summary', 'icon-spark'],
+  lecturers: ['Lecturers', 'icon-users'], units: ['Course units', 'icon-book'],
+  sessions: ['Sessions', 'icon-calendar'], team: ['Team', 'icon-users'],
+  departments: ['Departments', 'icon-building'], deptadmins: ['Department admins', 'icon-users'],
+  billing: ['Billing', 'icon-chart'], audit: ['Audit logs', 'icon-chart'],
+  overview: ['Overview', 'icon-chart'], breakglass: ['Break-glass', 'icon-shield'],
+  superadmin: ['Institutions', 'icon-building'], security: ['Security', 'icon-shield'],
+  analytics: ['Analytics', 'icon-chart'], apikeys: ['API keys', 'icon-settings'],
+};
+
+function activeRoleKey() {
+  if (isSuperAdmin) return 'super_admin';
+  if (isCentralAdmin) return 'central_admin';
+  if (isDeptAdmin) return 'dept_admin';
+  return normalizeRole(currentPermissions?.role) || 'lecturer';
+}
+
+function renderDashboardShell() {
+  const tabs = document.getElementById('tabs');
+  if (!tabs) return;
+  tabs.querySelectorAll('.tab-btn').forEach((button) => {
+    const tab = button.id.replace('tab-btn-', '');
+    const presentation = TAB_PRESENTATION[tab];
+    if (!presentation) return;
+    button.textContent = '';
+    const icon = document.createElement('span');
+    icon.className = `icon ${presentation[1]}`;
+    icon.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.textContent = presentation[0];
+    button.append(icon, label);
+  });
+  const config = ROLE_CONFIG[activeRoleKey()] || ROLE_CONFIG.lecturer;
+  config.navItems.forEach((item) => {
+    const button = document.getElementById(`tab-btn-${item.id}`);
+    if (button) tabs.appendChild(button);
+  });
+  tabs.dataset.scope = config.scope;
+  const scopeSummary = document.getElementById('scope-summary');
+  if (scopeSummary) scopeSummary.textContent = `Scope: ${config.scope}`;
+}
+
+function renderNeedsAttention() {
+  const target = document.getElementById('needs-attention-list');
+  if (!target) return;
+  const exceptions = allRecords.filter(record => ['failed', 'spoof'].includes(record.verified));
+  if (!exceptions.length) {
+    target.innerHTML = '<p class="empty-state">No attention items yet.</p>';
+    return;
+  }
+  const items = exceptions.slice(0, 3).map(record => {
+    const label = record.verified === 'spoof' ? 'Spoof suspected' : 'Verification failed';
+    return `<li>${escapeHtml(label)}${record.student_id ? ` · ${escapeHtml(record.student_id)}` : ''}</li>`;
+  }).join('');
+  target.innerHTML = `<ul class="attention-list">${items}</ul>`;
+}
+
 document.getElementById('ai-scope')?.addEventListener('change', function() {
   const wrap = document.getElementById('ai-scope-id-wrap');
   if (wrap) wrap.style.display = this.value === 'course_unit' ? '' : 'none';
@@ -65,7 +155,37 @@ function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = `show toast-${type}`;
+  const live = document.getElementById('live-region');
+  if (live) live.textContent = msg;
   setTimeout(() => { t.className = ''; }, 3000);
+}
+
+let lastModalTrigger = null;
+function initAccessibleDialogs() {
+  const overlays = document.querySelectorAll('.modal-overlay');
+  const observer = new MutationObserver(() => {
+    overlays.forEach(overlay => {
+      const open = overlay.classList.contains('visible');
+      overlay.setAttribute('aria-hidden', String(!open));
+      if (open) {
+        const focusable = overlay.querySelector('input, select, textarea, button, [tabindex]:not([tabindex="-1"])');
+        if (focusable && document.activeElement !== focusable) focusable.focus();
+      }
+    });
+  });
+  overlays.forEach(overlay => observer.observe(overlay, { attributes: true, attributeFilter: ['class'] }));
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const open = [...overlays].find(overlay => overlay.classList.contains('visible'));
+    if (open) {
+      const cancel = open.querySelector('.btn-cancel');
+      if (cancel) cancel.click(); else open.classList.remove('visible');
+      lastModalTrigger?.focus();
+    }
+  });
+  document.addEventListener('click', event => {
+    if (event.target.matches('button[onclick^="open"]')) lastModalTrigger = event.target;
+  }, true);
 }
 
 function escapeHtml(value) {
@@ -158,7 +278,7 @@ async function loadSessions() {
     if (!sessionsData.length) {
       document.getElementById('sessions-table-wrap').innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">📅</div>
+          <div class="empty-state-icon"><span class="icon icon-calendar" aria-hidden="true"></span></div>
           <p>No sessions found.<br>Sessions are created when attendance is taken.</p>
         </div>`;
       return;
@@ -266,9 +386,13 @@ async function viewSessionDetails(sessionId) {
             ? new Date(r.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
             : '—';
           const statusBadge = r.verified === 'success'
-            ? '<span class="badge badge-success">Success</span>'
+            ? '<span class="badge badge-success">Verified</span>'
             : r.verified === 'spoof'
-            ? '<span class="badge badge-spoof">Spoof</span>'
+            ? '<span class="badge badge-spoof">Spoof suspected</span>'
+            : r.verified === 'pending'
+            ? '<span class="badge badge-pending">Pending review</span>'
+            : r.verified === 'manual'
+            ? '<span class="badge badge-coord">Manually corrected</span>'
             : '<span class="badge badge-failed">Failed</span>';
           const conf = r.confidence ? (r.confidence * 100).toFixed(1) + '%' : '—';
 
@@ -367,6 +491,14 @@ function switchTab(tab) {
   if (btn) btn.classList.add('active');
   const panel = document.getElementById(`tab-${tab}`);
   if (panel) panel.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(button => {
+    button.setAttribute('aria-selected', String(button === btn));
+  });
+  document.querySelectorAll('.tab-panel').forEach(panelEl => {
+    panelEl.setAttribute('role', 'tabpanel');
+    panelEl.setAttribute('aria-hidden', String(panelEl !== panel));
+  });
+  document.getElementById('live-region')?.replaceChildren(document.createTextNode(`Showing ${btn?.textContent.trim() || tab}.`));
 
   if (tab === 'students')   loadStudents();
   if (tab === 'overview')   loadOverview();
@@ -778,96 +910,101 @@ async function initDashboard(session, isFreshLogin = false) {
       btn.className = `tab-btn ${classNames}`;
       btn.id = id;
       btn.textContent = text;
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', 'false');
+      btn.setAttribute('aria-controls', `tab-${targetTab}`);
       btn.addEventListener('click', () => switchTab(targetTab));
       return btn;
     };
 
-    tabs.appendChild(createSecureTab('tab-btn-attendance', '📅 Attendance', 'attendance', 'attendance-tab'));
-    tabs.appendChild(createSecureTab('tab-btn-aisummary', '🤖 AI Summary', 'aisummary', ''));
+    tabs.appendChild(createSecureTab('tab-btn-attendance', 'Attendance', 'attendance', 'attendance-tab'));
+    tabs.appendChild(createSecureTab('tab-btn-aisummary', 'AI summary', 'aisummary', ''));
 
     if (isCentralAdmin) {
       // ── Central Admin: institution-wide, all departments visible ─────────────
-      tabs.appendChild(createSecureTab('tab-btn-students',  '👥 Students',     'students',    ''));
-      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨🏫 Lecturers',   'lecturers',   ''));
+      tabs.appendChild(createSecureTab('tab-btn-students',  'Students',     'students',    ''));
+      tabs.appendChild(createSecureTab('tab-btn-lecturers', 'Lecturers',   'lecturers',   ''));
       if (currentInstitutionId) {
-        tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-units', 'Course units', 'units', 'units-tab'));
       }
-      tabs.appendChild(createSecureTab('tab-btn-sessions',  '📅 Sessions',     'sessions',    ''));
+      tabs.appendChild(createSecureTab('tab-btn-sessions',  'Sessions',     'sessions',    ''));
       if (currentPermissions?.canManageDepartments) {
-        tabs.appendChild(createSecureTab('tab-btn-departments', '🏛️ Departments', 'departments', ''));
+        tabs.appendChild(createSecureTab('tab-btn-departments', 'Departments', 'departments', ''));
       }
       if (currentPermissions?.canManageDeptAdmins) {
-        tabs.appendChild(createSecureTab('tab-btn-deptadmins', '👤 Dept Admins', 'deptadmins', ''));
+        tabs.appendChild(createSecureTab('tab-btn-deptadmins', 'Department admins', 'deptadmins', ''));
       }
       if (currentPermissions?.canViewBilling) {
-        tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-billing', 'Billing', 'billing', 'billing-tab'));
       }
       if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-audit', 'Audit logs', 'audit', 'audit-tab'));
       }
 
     } else if (isDeptAdmin) {
       // ── Dept Admin: same tabs as admin but queries filtered by department_id ──
-      tabs.appendChild(createSecureTab('tab-btn-students',  '👥 Students',   'students',  ''));
-      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨🏫 Lecturers', 'lecturers', ''));
+      tabs.appendChild(createSecureTab('tab-btn-students',  'Students',   'students',  ''));
+      tabs.appendChild(createSecureTab('tab-btn-lecturers', 'Lecturers', 'lecturers', ''));
       if (currentInstitutionId) {
-        tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-units', 'Course units', 'units', 'units-tab'));
       }
-      tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
+      tabs.appendChild(createSecureTab('tab-btn-sessions', 'Sessions', 'sessions', ''));
       tabs.appendChild(createSecureTab('tab-btn-team',     'Team',         'team',     ''));
       if (currentPermissions?.canViewBilling) {
-        tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-billing', 'Billing', 'billing', 'billing-tab'));
       }
       if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-audit', 'Audit logs', 'audit', 'audit-tab'));
       }
 
     } else if (isSuperAdmin) {
       // ── Super Admin: tiered access — aggregates + break-glass only ─────────────
       document.getElementById('metrics').style.display = 'none';
 
-      tabs.appendChild(createSecureTab('tab-btn-overview', '📊 Overview', 'overview', 'superadmin-tab'));
-      tabs.appendChild(createSecureTab('tab-btn-breakglass', '🔓 Break-glass', 'breakglass', 'superadmin-tab'));
+      tabs.appendChild(createSecureTab('tab-btn-overview', 'Overview', 'overview', 'superadmin-tab'));
+      tabs.appendChild(createSecureTab('tab-btn-breakglass', 'Break-glass', 'breakglass', 'superadmin-tab'));
 
       const adminTabBtn = document.createElement('button');
       adminTabBtn.className = 'tab-btn superadmin-tab';
       adminTabBtn.id = 'tab-btn-superadmin';
-      adminTabBtn.innerHTML = '🏢 Institutions <span class="pending-count" id="pending-count" style="display:none"></span>';
+      adminTabBtn.innerHTML = 'Institutions <span class="pending-count" id="pending-count" style="display:none"></span>';
       adminTabBtn.addEventListener('click', () => switchTab('superadmin'));
       tabs.appendChild(adminTabBtn);
 
       if (currentPermissions?.canViewSecurity) {
-        tabs.appendChild(createSecureTab('tab-btn-security', '🛡 Security', 'security', 'security-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-security', 'Security', 'security', 'security-tab'));
       }
       if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-audit', 'Audit logs', 'audit', 'audit-tab'));
       }
       if (currentPermissions?.canViewAnalytics) {
-        tabs.appendChild(createSecureTab('tab-btn-analytics', '📈 Analytics', 'analytics', 'superadmin-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-analytics', 'Analytics', 'analytics', 'superadmin-tab'));
       }
 
     } else {
       document.getElementById('metrics').style.display = '';
       // ── Admin (role='admin'): institution-scoped, all departments ─────────────
-      tabs.appendChild(createSecureTab('tab-btn-students', '👥 Students', 'students', ''));
-      tabs.appendChild(createSecureTab('tab-btn-lecturers', '👨‍🏫 Lecturers', 'lecturers', ''));
+      tabs.appendChild(createSecureTab('tab-btn-students', 'Students', 'students', ''));
+      tabs.appendChild(createSecureTab('tab-btn-lecturers', 'Lecturers', 'lecturers', ''));
 
       if (currentInstitutionId) {
-        tabs.appendChild(createSecureTab('tab-btn-units', '📚 Course Units', 'units', 'units-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-units', 'Course units', 'units', 'units-tab'));
       }
 
-      tabs.appendChild(createSecureTab('tab-btn-sessions', '📅 Sessions', 'sessions', ''));
+      tabs.appendChild(createSecureTab('tab-btn-sessions', 'Sessions', 'sessions', ''));
       tabs.appendChild(createSecureTab('tab-btn-team', 'Team', 'team', ''));
       if (currentPermissions?.canViewBilling) {
-        tabs.appendChild(createSecureTab('tab-btn-billing', '💳 Billing', 'billing', 'billing-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-billing', 'Billing', 'billing', 'billing-tab'));
       }
       if (currentPermissions?.canManageApiKeys) {
-        tabs.appendChild(createSecureTab('tab-btn-apikeys', '⚙ API Keys', 'apikeys', 'dev-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-apikeys', 'API keys', 'apikeys', 'dev-tab'));
       }
       if (currentPermissions?.canViewAudit) {
-        tabs.appendChild(createSecureTab('tab-btn-audit', '📋 Audit Logs', 'audit', 'audit-tab'));
+        tabs.appendChild(createSecureTab('tab-btn-audit', 'Audit logs', 'audit', 'audit-tab'));
       }
     }
+
+    renderDashboardShell();
 
     if (!isSuperAdmin && currentInstitutionId) {
       const { data: units } = await client
@@ -888,6 +1025,8 @@ async function initDashboard(session, isFreshLogin = false) {
     }
 
     document.getElementById('nav-user').textContent = session.user.email;
+    const scopeSummary = document.getElementById('scope-summary');
+    if (scopeSummary) scopeSummary.textContent = 'Scope: ' + (currentDepartmentId ? 'your department' : currentInstitutionId ? 'your institution' : 'aggregate view');
     document.getElementById('nav-superadmin').style.display = isSuperAdmin ? '' : 'none';
 
     const navInst = document.getElementById('nav-inst');
@@ -1186,24 +1325,24 @@ async function loadData() {
 
     document.getElementById('metrics').innerHTML = `
       <div class="metric-card cyan">
-        <div class="metric-label">Verified</div>
+        <div class="metric-label">Verified attendance</div>
         <div class="metric-value">${verified}</div>
         <div class="metric-sub">successful scans</div>
       </div>
       <div class="metric-card blue">
-        <div class="metric-label">Total Students</div>
+        <div class="metric-label">Enrolled students</div>
         <div class="metric-value">${totalStudents}</div>
         <div class="metric-sub">enrolled</div>
       </div>
       <div class="metric-card orange">
-        <div class="metric-label">Failed + Spoofs</div>
+        <div class="metric-label">Exceptions</div>
         <div class="metric-value">${failed + spoofs}</div>
         <div class="metric-sub">${spoofs} spoof attempts</div>
       </div>
       <div class="metric-card purple">
-        <div class="metric-label">Success Rate</div>
+        <div class="metric-label">Verified share</div>
         <div class="metric-value">${rate}%</div>
-        <div class="metric-sub">recognition accuracy</div>
+        <div class="metric-sub">of fetched records</div>
       </div>
     `;
 
@@ -1215,10 +1354,13 @@ async function loadData() {
     }
 
     renderTable(allRecords);
+    renderNeedsAttention();
+    const updated = document.getElementById('last-updated');
+    if (updated) updated.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
   } catch (e) {
     document.getElementById('table-wrap').innerHTML =
-      `<div class="loading" style="color:var(--red)">Failed to load: ${e.message}</div>`;
+      `<div class="loading error-state" style="color:var(--red)" role="alert">Failed to load attendance records. <button class="btn-refresh" onclick="loadData()">Retry</button><div class="detail-sub">${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -1518,7 +1660,7 @@ const AUDIT_ACTION_LABELS = {
   'student.delete':            { label: 'Student Deleted',       color: '#ff5050' },
   'api_key.create':            { label: 'API Key Created',       color: '#00f5c4' },
   'api_key.revoke':            { label: 'API Key Revoked',       color: '#ff5050' },
-  'break_glass_access':        { label: '🔓 Break-glass Access', color: '#ff5050' },
+  'break_glass_access':        { label: 'Break-glass access', color: '#dc2626' },
   'institution.approve':       { label: 'Institution Approved',  color: '#00f5c4' },
   'institution.suspend':       { label: 'Institution Suspended', color: '#ff5050' },
   'attendance.verify':         { label: 'Attendance Verified',   color: '#4a9eff' },
@@ -1752,7 +1894,7 @@ async function loadCoordinators() {
     if (!coordinators.length) {
       document.getElementById('team-table-wrap').innerHTML = `
         <div class="loading" style="padding:48px;">
-          <div style="margin-bottom:12px;font-size:1.5rem;">👥</div>
+          <div style="margin-bottom:12px;font-size:1.5rem;"><span class="icon icon-users" aria-hidden="true"></span></div>
           No coordinators yet. Invite someone to get started.
         </div>
       `;
@@ -1872,7 +2014,7 @@ async function loadLecturers() {
     if (!lecturersData.length) {
       document.getElementById('lecturers-table-wrap').innerHTML = `
         <div class="loading" style="padding:48px;">
-          <div style="margin-bottom:12px;font-size:1.5rem;">👨‍🏫</div>
+          <div style="margin-bottom:12px;font-size:1.5rem;"><span class="icon icon-users" aria-hidden="true"></span></div>
           No lecturers yet. Invite someone to get started.
         </div>
       `;
@@ -2209,7 +2351,7 @@ async function loadCourseUnits() {
     if (!courseUnitsCache.length) {
       document.getElementById('units-table-wrap').innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">📚</div>
+          <div class="empty-state-icon"><span class="icon icon-book" aria-hidden="true"></span></div>
           <p>No course units yet.<br>Add your first unit above.</p>
         </div>`;
       return;
@@ -2261,7 +2403,7 @@ async function loadDepartments() {
     if (!departments.length) {
       document.getElementById('departments-table-wrap').innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">🏛️</div>
+          <div class="empty-state-icon"><span class="icon icon-building" aria-hidden="true"></span></div>
           <p>No departments yet.<br>Add your first department above.</p>
         </div>`;
       return;
@@ -2314,7 +2456,7 @@ async function loadDeptAdmins() {
     if (!profiles.length) {
       document.getElementById('deptadmins-table-wrap').innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">👤</div>
+          <div class="empty-state-icon"><span class="icon icon-users" aria-hidden="true"></span></div>
           <p>No department admins yet.<br>Invite your first dept admin above.</p>
         </div>`;
       return;
@@ -2968,7 +3110,7 @@ async function loadApiKeys() {
     if (!keys.length) {
       document.getElementById('apikeys-table-wrap').innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">🔑</div>
+          <div class="empty-state-icon"><span class="icon icon-settings" aria-hidden="true"></span></div>
           <p>No API keys yet.<br>Generate your first key to start using the FaceAttend Enterprise API.</p>
         </div>`;
       return;
