@@ -3,299 +3,183 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FaceAttend — AI Face Verification Attendance for Universities</title>
-  <meta name="description" content="Replace paper registers with instant face recognition. Students verified in under a second. Real-time reports for lecturers. Built for African universities."/>
+  <title>FaceAttend — Attendance workflows for universities</title>
+  <meta name="description" content="FaceAttend helps universities enroll students, verify attendance, and review searchable records in one connected workflow."/>
   <meta name="color-scheme" content="light dark"/>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>"/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
-  <script src="/static/js/theme.js?v=20260801.1"></script>
-  <link rel="stylesheet" href="/static/css/styles.css?v=20260801"/>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/css/theme.css?v=20260928"/>
+  <link rel="stylesheet" href="/static/css/styles.css?v=20260928"/>
+  <script src="/static/js/theme.js?v=20260928"></script>
 </head>
-<body>
-<div class="grid-bg"></div>
+<body data-page="landing">
+<a class="skip-link" href="#main-content">Skip to main content</a>
 
-<!-- NAV -->
-<nav>
-  <div class="logo">Face<span>Attend</span></div>
-  <div class="nav-links">
-    <a href="#how-it-works">How It Works</a>
-    <a href="#features">Features</a>
-    <a href="#pricing">Pricing</a>
-    <a href="/dashboard" class="btn-nav btn-nav--ghost">Dashboard</a>
-    <a href="#signup" class="btn-nav">Get Started</a>
-  </div>
-  <div class="nav-actions">
-    <select id="theme-select" class="theme-select" aria-label="Theme">
-      <option value="system">Auto</option>
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-    </select>
-    <button class="nav-hamburger" id="nav-toggle" aria-label="Open menu">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-</nav>
+<header class="site-header">
+  <nav aria-label="Primary navigation">
+    <a class="logo" href="/" aria-label="FaceAttend home">Face<span>Attend</span></a>
+    <div class="nav-links" id="site-menu">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="/dashboard" class="btn-nav btn-nav--ghost">Log in</a>
+      <a href="#signup" class="btn-nav">Start free trial</a>
+    </div>
+    <div class="nav-actions">
+      <select id="theme-select" class="theme-select sr-only" aria-label="Theme">
+        <option value="system">Auto</option><option value="light">Light</option><option value="dark">Dark</option>
+      </select>
+      <button class="theme-toggle" id="theme-toggle" data-theme-toggle type="button" aria-label="Switch theme" title="Switch theme">
+        <span class="icon icon-spark" aria-hidden="true"></span>
+      </button>
+      <button class="nav-hamburger" id="nav-toggle" type="button" aria-label="Open menu" aria-controls="site-menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+</header>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-badge">
-    <span class="hero-badge__dot"></span>
-    AI-Powered · Face Verification · Instant Attendance · Built for Africa
-  </div>
-  <h1>Take attendance<br>in <span class="accent">seconds</span>,<br>not <span class="accent-orange">hours</span>.</h1>
-  <p class="hero-sub">
-    FaceAttend replaces paper registers with instant face verification.
-    Lecturers scan students in under a second — no IDs, no signatures, no delays.
-  </p>
-  <div class="hero-cta">
-    <a href="#signup" class="btn-primary">Start Free Trial</a>
-    <a href="#how-it-works" class="btn-secondary">See How It Works</a>
-  </div>
-</section>
+<main id="main-content">
+  <section class="hero hero-split" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">Attendance workflows for universities</p>
+      <h1 id="hero-title">Know who is in class, without slowing class down.</h1>
+      <p class="hero-sub">Enroll students, verify attendance, and review searchable records in one connected workflow.</p>
+      <div class="hero-cta">
+        <a href="#signup" class="btn-primary">Start free trial</a>
+        <a href="#demo" class="btn-secondary">Watch 60-second demo</a>
+      </div>
+      <div class="hero-chips" aria-label="Product highlights">
+        <span>Verification in under a second</span>
+        <span>Liveness check</span>
+        <span>30-day free trial with no card</span>
+      </div>
+    </div>
+    <div class="product-mockups" id="demo" aria-label="Illustrative FaceAttend product preview">
+      <div class="dashboard-mockup">
+        <div class="mockup-bar"><span></span><span></span><span></span><strong>Attendance overview</strong></div>
+        <div class="mockup-layout">
+          <div class="mockup-sidebar"><i></i><i></i><i></i><i></i></div>
+          <div class="mockup-content">
+            <div class="mockup-heading"><span></span><b></b></div>
+            <div class="mockup-kpis"><i></i><i></i><i></i></div>
+            <div class="mockup-table"><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-mockup">
+        <div class="phone-speaker"></div>
+        <div class="scan-ring"><span class="icon icon-camera" aria-hidden="true"></span></div>
+        <strong>Face recognised</strong>
+        <span>Ready to check in</span>
+        <button type="button">Check in</button>
+      </div>
+    </div>
+  </section>
 
-<!-- STATS -->
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-num">0.03s</div>
-    <div class="stat-label">Avg. Verification Time</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">98%+</div>
-    <div class="stat-label">Recognition Accuracy</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">30</div>
-    <div class="stat-label">Day Free Trial</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">4</div>
-    <div class="stat-label">Photos to Enroll a Student</div>
-  </div>
-</div>
+  <section class="proof-strip" aria-label="FaceAttend capabilities">
+    <div><strong>Under a second</strong><span>Verification speed</span></div>
+    <div><strong>Liveness check</strong><span>Anti-spoofing workflow</span></div>
+    <div><strong>Isolated data</strong><span>Per university</span></div>
+    <div><strong>CSV export</strong><span>Reports ready to share</span></div>
+  </section>
 
-<!-- HOW IT WORKS -->
-<section class="how-it-works" id="how-it-works">
-  <div class="section-label">How It Works</div>
-  <h2 class="section-title">Live in three simple steps.</h2>
-  <div class="steps-grid">
-    <div class="step-card">
-      <div class="step-num">01</div>
-      <div class="step-icon">🏛️</div>
-      <div class="step-title">Register Your Institution</div>
-      <div class="step-desc">Sign up on this page as the Central Administrator. Create departments, invite department admins, and get full visibility across your institution — all from one dashboard.</div>
+  <section class="content-section" id="how-it-works" aria-labelledby="how-title">
+    <p class="section-label">How it works</p>
+    <h2 class="section-title" id="how-title">A clear path from enrollment to report.</h2>
+    <div class="steps-grid">
+      <article class="step-card"><span class="step-icon icon icon-users" aria-hidden="true"></span><b>Enroll with 4 photos</b><p>Capture the student profile in the Android app and keep the record ready for class.</p><div class="mini-screen mini-enroll"><span></span><span></span><span></span></div></article>
+      <article class="step-card"><span class="step-icon icon icon-camera" aria-hidden="true"></span><b>Scan in class</b><p>Start a session, verify a student, and keep the outcome attached to the right course unit.</p><div class="mini-screen mini-scan"><i></i><i></i></div></article>
+      <article class="step-card"><span class="step-icon icon icon-chart" aria-hidden="true"></span><b>Review reports and export</b><p>Search attendance records, review exceptions, and export the records your team needs.</p><div class="mini-screen mini-report"><i></i><i></i><i></i></div></article>
     </div>
-    <div class="step-card">
-      <div class="step-num">02</div>
-      <div class="step-icon">📸</div>
-      <div class="step-title">Enroll Students</div>
-      <div class="step-desc">Use the Android app to capture 4 photos per student. They're live in the system immediately with no manual sync needed.</div>
-    </div>
-    <div class="step-card">
-      <div class="step-num">03</div>
-      <div class="step-icon">⚡</div>
-      <div class="step-title">Scan &amp; Get Reports</div>
-      <div class="step-desc">Point the camera at a student. Face recognized in 0.03 seconds. Attendance logs appear on the dashboard in real time.</div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<!-- FEATURES -->
-<section class="features" id="features">
-  <div class="section-label">Why FaceAttend</div>
-  <h2 class="section-title">Everything your university needs.</h2>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon cyan">🧠</div>
-      <div class="feature-title">InsightFace AI Engine</div>
-      <div class="feature-desc">Production-grade face recognition identifies students in 0.03 seconds with 98%+ accuracy — even in challenging lighting conditions.</div>
+  <section class="content-section" id="features" aria-labelledby="features-title">
+    <p class="section-label">Features</p>
+    <h2 class="section-title" id="features-title">Built around the work university teams already do.</h2>
+    <div class="feature-bento">
+      <article class="feature-card feature-card--large"><span class="feature-icon icon icon-spark" aria-hidden="true"></span><h3>Verify</h3><p>Face verification helps lecturers identify students during a session, with the result and supporting record available for review.</p><ul><li>InsightFace engine</li><li>Anti-spoofing liveness detection</li></ul></article>
+      <article class="feature-card"><span class="feature-icon icon icon-chart" aria-hidden="true"></span><h3>Report</h3><p>Real-time dashboard, CSV export, and AI attendance summaries.</p></article>
+      <article class="feature-card"><span class="feature-icon icon icon-users" aria-hidden="true"></span><h3>Manage</h3><p>Role-based access, course units, and multi-institution support.</p></article>
+      <article class="feature-card"><span class="feature-icon icon icon-shield" aria-hidden="true"></span><h3>Secure</h3><p>Audit logs, known device tracking, and daily digest emails.</p></article>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon orange">📱</div>
-      <div class="feature-title">Native Android App</div>
-      <div class="feature-desc">Dedicated Android app for lecturers and admins. Enroll students with 4 photos. Scan from any angle, in any classroom.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon blue">📊</div>
-      <div class="feature-title">Real-Time Web Dashboard</div>
-      <div class="feature-desc">Live attendance analytics accessible from any browser. Filter by date, student, or course unit. Export to CSV in one click.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon purple">🤖</div>
-      <div class="feature-title">AI Attendance Summaries</div>
-      <div class="feature-desc">Generate instant AI-written summaries of attendance trends per institution. Powered by DeepSeek — no manual report writing needed.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon cyan">🛡️</div>
-      <div class="feature-title">Anti-Spoofing Protection</div>
-      <div class="feature-desc">Liveness detection blocks photo and screen spoofing. Students cannot mark attendance using a printed photo or another person's face.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon orange">🏛️</div>
-      <div class="feature-title">Multi-Institution Support</div>
-      <div class="feature-desc">Every university gets its own isolated environment. Data never crosses institutional boundaries. Complete privacy guaranteed.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon blue">📚</div>
-      <div class="feature-title">Course Unit Management</div>
-      <div class="feature-desc">Assign students to multiple course units. Lecturers select the active class before scanning — attendance is logged per unit automatically.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon purple">🔐</div>
-      <div class="feature-title">Audit Logs &amp; Security</div>
-      <div class="feature-desc">Full audit trail of every admin action and login. Known device tracking, daily digest emails, and security analytics for super admins.</div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<!-- PRICING -->
-<section class="pricing-section" id="pricing">
-  <div class="section-label">Pricing</div>
-  <h2 class="section-title">Simple, transparent pricing.</h2>
-  <p class="pricing-sub">All plans include a 30-day free trial. No credit card required to start.</p>
-  <div class="pricing-grid">
+  <section class="trust-band" aria-labelledby="trust-title">
+    <div><p class="section-label">Trust and privacy</p><h2 id="trust-title">Attendance records should be explainable.</h2><p>Role-based access, audit trails, data isolation per institution, and anti-spoofing controls keep the workflow accountable.</p></div>
+    <div class="trust-list"><span><i class="icon icon-users" aria-hidden="true"></i> Role-based access</span><span><i class="icon icon-chart" aria-hidden="true"></i> Audit trail</span><span><i class="icon icon-shield" aria-hidden="true"></i> Data isolation per institution</span><span><i class="icon icon-book" aria-hidden="true"></i> <a href="/privacy">Plain-language privacy</a></span></div>
+  </section>
 
-    <div class="pricing-card">
-      <div class="pricing-plan">Starter</div>
-      <div class="pricing-price">$49<span> / mo</span></div>
-      <div class="pricing-period">Up to 500 students</div>
-      <ul class="pricing-features">
-        <li>500 student profiles</li>
-        <li>Unlimited course units</li>
-        <li>Android enrollment app</li>
-        <li>Real-time dashboard</li>
-        <li>CSV export</li>
-        <li>Email support</li>
-      </ul>
-      <a href="/cdn-cgi/l/email-protection#4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" class="btn-pricing outline" data-cfemail="4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" data-mailto-subject="FaceAttend Starter Plan">Contact Us</a>
+  <section class="content-section pricing-section" id="pricing" aria-labelledby="pricing-title">
+    <p class="section-label">Pricing</p>
+    <h2 class="section-title" id="pricing-title">Start with the plan that fits your institution.</h2>
+    <div class="currency-control" role="group" aria-label="Display currency">
+      <button type="button" class="currency-btn active" data-currency="USD">USD</button>
+      <button type="button" class="currency-btn" data-currency="UGX">UGX</button>
+      <button type="button" class="currency-btn" data-currency="RWF">RWF</button>
     </div>
-
-    <div class="pricing-card featured">
-      <div class="pricing-badge">Most Popular</div>
-      <div class="pricing-plan">Growth</div>
-      <div class="pricing-price">$99<span> / mo</span></div>
-      <div class="pricing-period">Up to 2,000 students</div>
-      <ul class="pricing-features">
-        <li>2,000 student profiles</li>
-        <li>Unlimited course units</li>
-        <li>Android enrollment app</li>
-        <li>Real-time dashboard &amp; CSV export</li>
-        <li>Anti-spoofing liveness detection</li>
-        <li>AI attendance summaries</li>
-        <li>Audit logs &amp; security analytics</li>
-        <li>Priority email support</li>
-      </ul>
-      <a href="/cdn-cgi/l/email-protection#4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" class="btn-pricing filled" data-cfemail="4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" data-mailto-subject="FaceAttend Growth Plan">Contact Us</a>
+    <div class="pricing-grid">
+      <article class="pricing-card"><h3>Starter</h3><strong class="price" data-usd="49">$49<span>/mo</span></strong><p>Up to 500 students</p><ul><li>500 student profiles</li><li>Unlimited course units</li><li>Android enrollment app</li><li>Real-time dashboard and CSV export</li></ul><a href="#signup" class="btn-pricing outline">Start free trial</a></article>
+      <article class="pricing-card featured"><span class="pricing-badge">Most popular</span><h3>Growth</h3><strong class="price" data-usd="99">$99<span>/mo</span></strong><p>Up to 2,000 students</p><ul><li>2,000 student profiles</li><li>Anti-spoofing liveness detection</li><li>AI attendance summaries</li><li>Audit logs and security analytics</li></ul><a href="#signup" class="btn-pricing filled">Start free trial</a></article>
+      <article class="pricing-card"><h3>Pro</h3><strong class="price" data-usd="199">$199<span>/mo</span></strong><p>Up to 5,000 students</p><ul><li>5,000 student profiles</li><li>Coordinator accounts</li><li>Real-time dashboard and CSV export</li><li>Priority support</li></ul><a href="#signup" class="btn-pricing outline">Start free trial</a></article>
+      <article class="pricing-card"><h3>Enterprise</h3><strong class="price">Custom</strong><p>5,000+ students · Multi-campus</p><ul><li>Unlimited students</li><li>Multi-campus support</li><li>Enterprise API access</li><li>Custom SLA and contract</li></ul><a href="#signup" class="btn-pricing outline">Talk to us</a></article>
     </div>
+    <p class="pricing-note">Mobile money and card payments are supported. UGX and RWF display values are TODO: confirm exchange rates before publishing.</p>
+  </section>
 
-    <div class="pricing-card">
-      <div class="pricing-plan">Pro</div>
-      <div class="pricing-price">$199<span> / mo</span></div>
-      <div class="pricing-period">Up to 5,000 students</div>
-      <ul class="pricing-features">
-        <li>5,000 student profiles</li>
-        <li>Unlimited course units</li>
-        <li>Android enrollment app</li>
-        <li>Real-time dashboard &amp; CSV export</li>
-        <li>Anti-spoofing liveness detection</li>
-        <li>AI attendance summaries</li>
-        <li>Audit logs &amp; security analytics</li>
-        <li>Coordinator accounts</li>
-        <li>Priority support + SLA</li>
-      </ul>
-      <a href="/cdn-cgi/l/email-protection#4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" class="btn-pricing outline" data-cfemail="4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" data-mailto-subject="FaceAttend Pro Plan">Contact Us</a>
+  <section class="content-section faq-section" id="faq" aria-labelledby="faq-title">
+    <p class="section-label">FAQ</p><h2 class="section-title" id="faq-title">Questions teams ask before they start.</h2>
+    <div class="faq-list">
+      <details><summary>How are students enrolled?</summary><p>Students are enrolled through the Android app, which captures four photos for the student profile.</p></details>
+      <details><summary>What happens if verification fails?</summary><p>The verification result remains available for review in the attendance record. The team can follow its existing review workflow.</p></details>
+      <details><summary>How are student consent and data handled?</summary><p>Review the <a href="/privacy">privacy notice</a> before registering. TODO: owner to confirm the consent wording for this page.</p></details>
+      <details><summary>How long is data kept?</summary><p>TODO: owner to confirm the retention period from the current policy.</p></details>
+      <details><summary>Which devices are supported?</summary><p>The enrollment and attendance workflow currently uses the Android app and a browser dashboard.</p></details>
+      <details><summary>How do I delete data?</summary><p>TODO: owner to confirm the deletion request process from the current policy.</p></details>
     </div>
+  </section>
 
-    <div class="pricing-card">
-      <div class="pricing-plan">Enterprise</div>
-      <div class="pricing-price">Custom</div>
-      <div class="pricing-period">5,000+ students · Multi-campus</div>
-      <ul class="pricing-features">
-        <li>Unlimited students</li>
-        <li>Multi-campus support</li>
-        <li>Dedicated server option</li>
-        <li>Enterprise API access</li>
-        <li>On-site training</li>
-        <li>Dedicated account manager</li>
-        <li>Custom SLA &amp; contract</li>
-      </ul>
-      <a href="/cdn-cgi/l/email-protection#4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" class="btn-pricing outline" data-cfemail="4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" data-mailto-subject="FaceAttend Enterprise">Contact Us</a>
-    </div>
-
-  </div>
-  <div class="pricing-trial-note">
-    Not sure which plan fits? <a href="#signup">Start your 30-day free trial</a> — full access, no commitment.
-  </div>
-</section>
-
-<!-- SIGNUP -->
-<section class="signup-section" id="signup">
-  <div class="signup-container">
-    <div class="signup-header">
-      <div class="section-label">Get Started</div>
-      <h2>Register your university</h2>
-      <p>Start your 30-day free trial. No credit card required. The person registering becomes the <strong style="color:var(--cyan)">Central Administrator</strong> — responsible for setting up departments and inviting department admins.</p>
-    </div>
+  <section class="signup-section" id="signup" aria-labelledby="signup-title">
+    <div class="signup-aside"><p class="section-label">Get started</p><h2 id="signup-title">Set up your university workspace.</h2><p>Register as the Central Administrator and start a 30-day free trial with no credit card.</p><h3>What happens next</h3><ul><li>Create departments</li><li>Invite department admins</li><li>Enroll students</li></ul><p class="pilot-note"><strong>Pilot programme</strong><br>Early universities can help shape the workflow with the FaceAttend team.</p></div>
     <div class="signup-card">
-      <form id="signup-form">
-        <div class="form-group">
-          <label for="university_name">University Name</label>
-          <input type="text" id="university_name" name="university_name" placeholder="e.g. Kampala International University" required/>
-        </div>
-        <div class="form-group">
-          <label for="admin_full_name">Central Administrator Full Name</label>
-          <input type="text" id="admin_full_name" name="admin_full_name" placeholder="e.g. Dr. John Mukasa" required/>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="admin_email">Admin Email</label>
-            <input type="email" id="admin_email" name="admin_email" placeholder="admin@university.ac.ug" autocomplete="email" required/>
-          </div>
-          <div class="form-group">
-            <label for="phone">Phone Number</label>
-            <input type="tel" id="phone" name="phone" placeholder="+256 700 000 000" autocomplete="tel" required/>
-          </div>
-        </div>
-        <div class="trial-note">
-          🎉 30-day free trial · Full access · No credit card needed · You register as Central Admin
-        </div>
-        <button type="submit" class="btn-submit" id="submit-btn">
-          Create Institution Account
-        </button>
-        <div class="status-msg" id="status-msg"></div>
+      <form id="signup-form" novalidate aria-describedby="signup-help">
+        <p id="signup-help" class="form-help">Required fields are marked in the labels. Use an institutional email where possible.</p>
+        <div class="form-group"><label for="university_name">University name</label><input type="text" id="university_name" name="university_name" placeholder="e.g. Kampala International University" required/></div>
+        <div class="form-group"><label for="admin_full_name">Central Administrator full name</label><input type="text" id="admin_full_name" name="admin_full_name" placeholder="e.g. Dr. John Mukasa" required/></div>
+        <div class="form-row"><div class="form-group"><label for="admin_email">Admin email</label><input type="email" id="admin_email" name="admin_email" placeholder="admin@university.ac.ug" autocomplete="email" required/></div><div class="form-group"><label for="phone">Phone number</label><input type="tel" id="phone" name="phone" placeholder="+256 700 000 000" autocomplete="tel" required/></div></div>
+        <div class="trial-note">30-day free trial · Full access · No credit card needed · You register as Central Administrator</div>
+        <button type="submit" class="btn-submit" id="submit-btn">Create institution account</button>
+        <div class="status-msg" id="status-msg" role="status" aria-live="polite" tabindex="-1"></div>
       </form>
     </div>
-  </div>
-</section>
+  </section>
+</main>
 
-<!-- FOOTER -->
-<footer>
-  <div class="footer-contact">
-    <div style="margin-bottom:6px;">Questions?</div>
-    <!--email_off--><a href="/cdn-cgi/l/email-protection#4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" class="__cf_email__" data-cfemail="4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a">[email&#160;protected]</a><!--/email_off-->
-  </div>
-  <div class="footer-center">
-    <div class="logo" style="font-size:1rem;margin-bottom:6px;">Face<span style="color:var(--cyan)">Attend</span></div>
-    <div>Attendance in Seconds, Not Hours</div>
-    <div style="margin-top:4px;font-size:0.75rem;">Built for Universities · Powered by InsightFace AI</div>
-    <div style="margin-top:10px;">
-      <a href="/privacy" style="color:var(--muted);font-size:0.78rem;">Privacy</a>
-      &nbsp;·&nbsp;
-      <a href="/terms" style="color:var(--muted);font-size:0.78rem;">Terms</a>
-    </div>
-  </div>
-  <div class="footer-right">
-    © 2026 FaceAttend · Uganda
-    <div style="margin-top:12px;">
-      <a href="https://websitelaunches.com/site/faceattend.app" target="_blank" rel="noopener">
-        <img id="launch-badge" src="https://websitelaunches.com/badge/faceattend.app.svg?theme=dark"
-             alt="Established online - Public launch record"
-             width="180" height="39"/>
-      </a>
-    </div>
-  </div>
+<footer aria-label="Footer">
+  <div><a class="logo" href="/">Face<span>Attend</span></a><p>Attendance workflows for universities.</p></div>
+  <nav aria-label="Footer links"><a href="#features">Product</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:hello@faceattend.app">Contact</a></nav>
+  <div><button class="theme-toggle" data-theme-toggle type="button" aria-label="Switch theme" title="Switch theme"><span class="icon icon-spark" aria-hidden="true"></span></button><p>© 2026 FaceAttend · Uganda</p></div>
 </footer>
 
 <script src="/static/js/cf-email.js" defer></script>
 <script src="/static/js/main.js"></script>
+<script>
+  const FACEATTEND_CURRENCY_VALUES = {
+    USD: { symbol: '$', values: { starter: 49, growth: 99, pro: 199 } },
+    UGX: { symbol: 'UGX ', values: { starter: null, growth: null, pro: null } }, // TODO: owner to confirm exchange rates
+    RWF: { symbol: 'RWF ', values: { starter: null, growth: null, pro: null } }, // TODO: owner to confirm exchange rates
+  };
+  document.querySelectorAll('.currency-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const currency = FACEATTEND_CURRENCY_VALUES[button.dataset.currency];
+      document.querySelectorAll('.currency-btn').forEach((item) => item.classList.toggle('active', item === button));
+      document.querySelectorAll('.price[data-usd]').forEach((price) => {
+        const key = price.closest('.pricing-card').querySelector('h3').textContent.toLowerCase();
+        const value = currency.values[key];
+        price.innerHTML = value == null ? 'TODO<span>/mo</span>' : `${currency.symbol}${value}<span>/mo</span>`;
+      });
+    });
+  });
+</script>
 </body>
 </html>
