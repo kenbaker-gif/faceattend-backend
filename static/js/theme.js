@@ -55,6 +55,12 @@ const FaceAttendTheme = (() => {
     if (select && select.value !== preference) {
       select.value = preference;
     }
+    document.querySelectorAll('[data-theme-toggle], #theme-toggle').forEach((toggle) => {
+      const nextTheme = effectiveTheme === 'dark' ? 'light' : 'dark';
+      toggle.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
+      toggle.setAttribute('title', `Switch to ${nextTheme} theme`);
+      toggle.dataset.effectiveTheme = effectiveTheme;
+    });
 
     if (badge) {
       const badgeUrl = new URL(badge.src);
@@ -99,15 +105,21 @@ const FaceAttendTheme = (() => {
     syncThemeUi(resolvePreference());
 
     const select = document.getElementById('theme-select');
-    if (!select || select.dataset.themeBound === 'true') return;
+    if (select && select.dataset.themeBound !== 'true') {
+      select.dataset.themeBound = 'true';
+      const handleThemeChange = () => setPreference(select.value);
+      select.addEventListener('input', handleThemeChange);
+      select.addEventListener('change', handleThemeChange);
+    }
 
-    select.dataset.themeBound = 'true';
-    const handleThemeChange = () => {
-      setPreference(select.value);
-    };
-
-    select.addEventListener('input', handleThemeChange);
-    select.addEventListener('change', handleThemeChange);
+    document.querySelectorAll('[data-theme-toggle], #theme-toggle').forEach((toggle) => {
+      if (toggle.dataset.themeBound === 'true') return;
+      toggle.dataset.themeBound = 'true';
+      toggle.addEventListener('click', () => {
+        const current = resolveEffectiveTheme(resolvePreference());
+        setPreference(current === 'dark' ? 'light' : 'dark');
+      });
+    });
   }
 
   return {
