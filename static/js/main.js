@@ -28,6 +28,16 @@ function initSignupForm() {
     btn.textContent      = 'Creating account…';
     status.style.display = 'none';
     status.className     = 'status-msg';
+    if (!universityName || !adminFullName || !adminEmail || !phone) {
+      const firstInvalid = [...form.querySelectorAll('input[required]')].find(field => !field.value.trim());
+      if (firstInvalid) { firstInvalid.setAttribute('aria-invalid', 'true'); firstInvalid.focus(); }
+      status.className = 'status-msg error';
+      status.textContent = 'Complete all required fields before submitting.';
+      status.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Create Institution Account';
+      return;
+    }
 
     const formData = new FormData();
     formData.append('university_name', universityName);
@@ -54,6 +64,7 @@ function initSignupForm() {
             You are the <strong>Central Administrator</strong>. After logging in, create your departments and invite department admins to get started.
           </span>
         `;
+        status.focus();
         form.reset();
         btn.textContent = 'Account Created ✓';
 
@@ -68,6 +79,7 @@ function initSignupForm() {
       status.className     = 'status-msg error';
       status.style.display = 'block';
       status.textContent   = err.message;
+      status.focus();
       btn.disabled         = false;
       btn.textContent      = 'Create Institution Account';
     }
@@ -84,10 +96,24 @@ function initMobileNav() {
     links.classList.toggle('open');
     const isOpen = links.classList.contains('open');
     toggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+    toggle.setAttribute('aria-expanded', String(isOpen));
   });
 
   links.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => links.classList.remove('open'));
+    a.addEventListener('click', () => {
+      links.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && links.classList.contains('open')) {
+      links.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+      toggle.focus();
+    }
   });
 }
 

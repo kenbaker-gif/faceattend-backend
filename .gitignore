@@ -11,6 +11,9 @@ data/processed/
 data/raw_faces/
 *.jpg
 *.png
+!static/apple-touch-icon.png
+!static/icon-192.png
+!static/icon-512.png
 *.jpeg
 
 # Database backups

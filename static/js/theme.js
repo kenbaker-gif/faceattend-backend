@@ -32,13 +32,16 @@ const FaceAttendTheme = (() => {
     const root = document.documentElement;
     root.dataset.theme = effectiveTheme;
     root.style.colorScheme = effectiveTheme;
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.content = effectiveTheme === 'dark' ? '#0e1416' : '#f4f7f7';
   }
 
   function persistPreference(preference) {
     try {
       localStorage.setItem(STORAGE_KEY, preference);
+      return true;
     } catch (error) {
-      // Ignore persistence failures.
+      return false;
     }
   }
 
@@ -55,11 +58,10 @@ const FaceAttendTheme = (() => {
     if (select && select.value !== preference) {
       select.value = preference;
     }
-    document.querySelectorAll('[data-theme-toggle], #theme-toggle').forEach((toggle) => {
-      const nextTheme = effectiveTheme === 'dark' ? 'light' : 'dark';
-      toggle.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
-      toggle.setAttribute('title', `Switch to ${nextTheme} theme`);
-      toggle.dataset.effectiveTheme = effectiveTheme;
+    document.querySelectorAll('[data-theme-choice]').forEach((toggle) => {
+      const active = toggle.dataset.themeChoice === preference;
+      toggle.setAttribute('aria-pressed', String(active));
+      toggle.classList.toggle('active', active);
     });
 
     if (badge) {
@@ -75,11 +77,11 @@ const FaceAttendTheme = (() => {
     syncThemeUi(preference);
 
     if (window.queueMicrotask) {
-      queueMicrotask(() => persistPreference(preference));
+      queueMicrotask(() => { if (!persistPreference(preference)) syncThemeUi('system'); });
       return;
     }
 
-    window.setTimeout(() => persistPreference(preference), 0);
+    window.setTimeout(() => { if (!persistPreference(preference)) syncThemeUi('system'); }, 0);
   }
 
   function watchSystemTheme() {
@@ -112,13 +114,10 @@ const FaceAttendTheme = (() => {
       select.addEventListener('change', handleThemeChange);
     }
 
-    document.querySelectorAll('[data-theme-toggle], #theme-toggle').forEach((toggle) => {
+    document.querySelectorAll('[data-theme-choice]').forEach((toggle) => {
       if (toggle.dataset.themeBound === 'true') return;
       toggle.dataset.themeBound = 'true';
-      toggle.addEventListener('click', () => {
-        const current = resolveEffectiveTheme(resolvePreference());
-        setPreference(current === 'dark' ? 'light' : 'dark');
-      });
+      toggle.addEventListener('click', () => setPreference(toggle.dataset.themeChoice));
     });
   }
 

@@ -4,8 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FaceAttend — Dashboard</title>
-<link rel="icon" type="image/x-icon" href="/static/admin_favicon.ico">
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 <meta name="color-scheme" content="light dark"/>
+<meta name="theme-color" content="#f4f7f7"/>
+<script>try{const p=localStorage.getItem('faceattend-theme');const v=p==='light'||p==='dark'?p:'system';const e=v==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):v;document.documentElement.dataset.themePreference=v;document.documentElement.dataset.theme=e;}catch(e){document.documentElement.dataset.themePreference='system';}</script>
 <link rel="stylesheet" href="/static/css/theme.css?v=20260928">
 <link rel="stylesheet" href="/static/css/dashboard.css?v=20260928">
 <script src="/static/js/theme.js?v=20260928"></script>
@@ -281,7 +285,11 @@
         <option value="light">Light</option>
         <option value="dark">Dark</option>
       </select>
-      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme"><span class="icon icon-spark" aria-hidden="true"></span></button>
+      <div class="theme-control" role="group" aria-label="Theme">
+        <button type="button" data-theme-choice="light" aria-label="Light theme" title="Light theme"><span class="icon icon-sun" aria-hidden="true"></span></button>
+        <button type="button" data-theme-choice="system" aria-label="System theme" title="System theme"><span class="icon icon-device" aria-hidden="true"></span></button>
+        <button type="button" data-theme-choice="dark" aria-label="Dark theme" title="Dark theme"><span class="icon icon-moon" aria-hidden="true"></span></button>
+      </div>
       <span class="nav-superadmin" id="nav-superadmin" style="display:none"><span class="icon icon-shield" aria-hidden="true"></span> Super admin</span>
       <span class="nav-inst" id="nav-inst" style="display:none"></span>
       <span class="nav-user" id="nav-user"></span>
@@ -298,20 +306,24 @@
       </div>
       <p class="last-updated" id="last-updated" aria-live="polite">Not updated yet</p>
     </header>
-    <div class="metrics-grid" id="metrics">
-      <div class="loading"><div class="spinner"></div>Loading...</div>
-    </div>
-    <section class="attention-panel" id="needs-attention" aria-labelledby="needs-attention-title">
-      <div><p class="section-header">Needs attention</p><h2 id="needs-attention-title">Review the latest exceptions</h2></div>
-      <div id="needs-attention-list"><p class="empty-state">No attention items yet.</p></div>
-    </section>
+    <div class="dashboard-shell">
+      <aside class="tabs dashboard-sidebar" id="tabs" role="tablist" aria-label="Dashboard sections">
+        <button class="tab-btn active" id="tab-btn-attendance" role="tab" aria-selected="true" aria-controls="tab-attendance" onclick="switchTab('attendance')">Attendance records</button>
+        <button class="tab-btn" id="tab-btn-students" role="tab" aria-selected="false" aria-controls="tab-students" onclick="switchTab('students')">Students</button>
+        <button class="tab-btn" id="tab-btn-aisummary" role="tab" aria-selected="false" aria-controls="tab-aisummary" onclick="switchTab('aisummary')">AI summary</button>
+        <button class="tab-btn" id="tab-btn-lecturers" role="tab" aria-selected="false" aria-controls="tab-lecturers" onclick="switchTab('lecturers')">Lecturers</button>
+      </aside>
 
-    <aside class="tabs dashboard-sidebar" id="tabs" role="tablist" aria-label="Dashboard sections">
-      <button class="tab-btn active" id="tab-btn-attendance" role="tab" aria-selected="true" aria-controls="tab-attendance" onclick="switchTab('attendance')">Attendance records</button>
-      <button class="tab-btn" id="tab-btn-students" role="tab" aria-selected="false" aria-controls="tab-students" onclick="switchTab('students')">Students</button>
-      <button class="tab-btn" id="tab-btn-aisummary" role="tab" aria-selected="false" aria-controls="tab-aisummary" onclick="switchTab('aisummary')">AI summary</button>
-      <button class="tab-btn" id="tab-btn-lecturers" role="tab" aria-selected="false" aria-controls="tab-lecturers" onclick="switchTab('lecturers')">Lecturers</button>
-    </div>
+      <section class="dashboard-content">
+        <div class="dashboard-summary" id="dashboard-summary">
+          <div class="metrics-grid" id="metrics">
+            <div class="loading"><div class="spinner"></div>Loading...</div>
+          </div>
+          <section class="attention-panel" id="needs-attention" aria-labelledby="needs-attention-title">
+            <div><p class="section-header">Needs attention</p><h2 id="needs-attention-title">Review the latest exceptions</h2></div>
+            <div id="needs-attention-list"><p class="empty-state">No attention items yet.</p></div>
+          </section>
+        </div>
 
     <!-- Attendance Tab -->
     <div class="tab-panel active" id="tab-attendance">
@@ -612,6 +624,7 @@
       </div>
       <div class="audit-pagination" id="audit-pagination"></div>
     </div>
+    </section>
 
   </main><!-- /main -->
 </div><!-- /dashboard-screen -->
