@@ -87,13 +87,13 @@ const ROLE_CONFIG = {
 };
 
 const TAB_PRESENTATION = {
-  attendance: ['Attendance', 'icon-calendar'], students: ['Students', 'icon-users'],
+  attendance: ['Attendance', 'icon-calendar-check'], students: ['Students', 'icon-school'],
   aisummary: ['AI summary', 'icon-spark'],
-  lecturers: ['Lecturers', 'icon-users'], units: ['Course units', 'icon-book'],
-  sessions: ['Sessions', 'icon-calendar'], team: ['Team', 'icon-users'],
+  lecturers: ['Lecturers', 'icon-chalkboard'], units: ['Course units', 'icon-book'],
+  sessions: ['Sessions', 'icon-calendar'], team: ['Team', 'icon-users-group'],
   departments: ['Departments', 'icon-building'], deptadmins: ['Department admins', 'icon-users'],
-  billing: ['Billing', 'icon-chart'], audit: ['Audit logs', 'icon-chart'],
-  overview: ['Overview', 'icon-chart'], breakglass: ['Break-glass', 'icon-shield'],
+  billing: ['Billing', 'icon-credit-card'], audit: ['Audit logs', 'icon-list-details'],
+  overview: ['Overview', 'icon-layout-dashboard'], breakglass: ['Break-glass', 'icon-shield'],
   superadmin: ['Institutions', 'icon-building'], security: ['Security', 'icon-shield'],
   analytics: ['Analytics', 'icon-chart'], apikeys: ['API keys', 'icon-settings'],
 };
@@ -138,9 +138,24 @@ function renderNeedsAttention() {
     target.innerHTML = '<p class="empty-state">No attention items yet.</p>';
     return;
   }
-  const items = exceptions.slice(0, 3).map(record => {
-    const label = record.verified === 'spoof' ? 'Spoof suspected' : 'Verification failed';
-    return `<li>${escapeHtml(label)}${record.student_id ? ` · ${escapeHtml(record.student_id)}` : ''}</li>`;
+  const groups = exceptions.reduce((result, record) => {
+    const key = record.verified === 'spoof' ? 'spoof' : 'failed';
+    const existing = result[key] || { count: 0, latest: null };
+    existing.count += 1;
+    const timestamp = record.timestamp || record.created_at;
+    if (timestamp && (!existing.latest || new Date(timestamp) > new Date(existing.latest))) {
+      existing.latest = timestamp;
+    }
+    result[key] = existing;
+    return result;
+  }, {});
+  const formatTime = (timestamp) => timestamp
+    ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'time unavailable';
+  const items = Object.entries(groups).map(([key, group]) => {
+    const label = key === 'spoof' ? `${group.count} spoof attempts` : `${group.count} failed verifications`;
+    const warningClass = key === 'spoof' ? '' : ' is-warning';
+    return `<li class="${warningClass.trim()}"><span>${escapeHtml(label)}</span><small>Latest ${escapeHtml(formatTime(group.latest))}</small><button type="button" class="attention-link" onclick="switchTab('attendance')">View attendance</button></li>`;
   }).join('');
   target.innerHTML = `<ul class="attention-list">${items}</ul>`;
 }
@@ -491,6 +506,8 @@ function switchTab(tab) {
   if (btn) btn.classList.add('active');
   const panel = document.getElementById(`tab-${tab}`);
   if (panel) panel.classList.add('active');
+  const summary = document.getElementById('dashboard-summary');
+  if (summary) summary.hidden = !['attendance', 'overview'].includes(tab);
   document.querySelectorAll('.tab-btn').forEach(button => {
     button.setAttribute('aria-selected', String(button === btn));
   });
