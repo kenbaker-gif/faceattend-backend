@@ -65,17 +65,19 @@ def _strip_markdown(text: str) -> str:
 @router.get("/admin/attendance-records")
 async def get_attendance_records(
     institution_id: str = None,
+    department_id: str = None,
     limit: int = 500,
     user=Depends(check_admin),
 ):
     try:
         profile_resp = supabase_admin.table("profiles") \
-            .select("institution_id, is_super_admin, role") \
+            .select("institution_id, is_super_admin, role, department_id") \
             .eq("id", user.id).single().execute()
 
         is_super_admin = _bool_flag(profile_resp.data.get("is_super_admin") if profile_resp.data else None)
         role = profile_resp.data.get("role", "") if profile_resp.data else ""
         user_institution_id = profile_resp.data.get("institution_id") if profile_resp.data else None
+        user_department_id = profile_resp.data.get("department_id") if profile_resp.data else None
         is_super = is_super_admin or role == "super_admin"
 
         if is_super:
@@ -90,6 +92,14 @@ async def get_attendance_records(
                 detail="Institution admin requires institution_id in profile",
             )
 
+        effective_department_id = None
+        if role == "dept_admin":
+            effective_department_id = department_id or user_department_id
+            if department_id and department_id != user_department_id:
+                raise HTTPException(status_code=403, detail="Department mismatch: you can only view your own department records.")
+            if not effective_department_id:
+                raise HTTPException(status_code=403, detail="Department admin requires department_id in profile")
+
         query = (
             supabase_admin.table("attendance_records")
             .select("*, course_units(name)")
@@ -97,6 +107,9 @@ async def get_attendance_records(
             .limit(limit)
             .eq("institution_id", user_institution_id)
         )
+
+        if effective_department_id:
+            query = query.eq("department_id", effective_department_id)
 
         rows = query.execute().data or []
 
@@ -121,6 +134,7 @@ async def ai_attendance_summary(
     date_from: str = None,
     date_to: str = None,
     institution_id: str = None,
+    department_id: str = None,
     user=Depends(check_admin),
 ):
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
@@ -142,15 +156,25 @@ async def ai_attendance_summary(
 
     # ── Admin profile ───────────────────────────────────────────────────────
     profile_resp = supabase_admin.table("profiles") \
-        .select("institution_id, is_super_admin, role") \
+        .select("institution_id, is_super_admin, role, department_id") \
         .eq("id", user.id).single().execute()
 
     profile = profile_resp.data or {}
-    is_super = _bool_flag(profile.get("is_super_admin")) or profile.get("role", "") == "super_admin"
+    role = profile.get("role", "")
+    is_super = _bool_flag(profile.get("is_super_admin")) or role == "super_admin"
     user_institution_id = profile.get("institution_id")
+    user_department_id = profile.get("department_id")
 
     if not is_super and not user_institution_id:
         raise HTTPException(status_code=403, detail="Admin not linked to an institution.")
+
+    effective_department_id = None
+    if role == "dept_admin":
+        effective_department_id = department_id or user_department_id
+        if department_id and department_id != user_department_id:
+            raise HTTPException(status_code=403, detail="Department mismatch: you can only view your own department summaries.")
+        if not effective_department_id:
+            raise HTTPException(status_code=403, detail="Department admin requires department_id in profile.")
 
     if is_super:
         effective_institution_id = institution_id or user_institution_id
@@ -184,6 +208,9 @@ async def ai_attendance_summary(
             .order("timestamp", desc=True)
             .limit(AI_RECORD_LIMIT)
         )
+
+        if effective_department_id:
+            query = query.eq("department_id", effective_department_id)
 
         if scope == "course_unit":
             query = query.eq("course_unit_id", scope_id)

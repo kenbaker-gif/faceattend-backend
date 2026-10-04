@@ -85,16 +85,30 @@ footer {
   footer { padding: 24px 20px; }
 }
 </style>
+<link rel="stylesheet" href="/static/css/theme.css?v=20261001"/>
+<link rel="stylesheet" href="/static/css/legal.css?v=20261001"/>
+<script>try{const p=localStorage.getItem('faceattend-theme');const v=p==='light'||p==='dark'?p:'system';const e=v==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):v;document.documentElement.dataset.themePreference=v;document.documentElement.dataset.theme=e;}catch(e){document.documentElement.dataset.themePreference='system';}</script>
+<script src="/static/js/theme.js?v=20260928"></script>
 </head>
-<body>
+<body data-page="legal">
 <div class="grid-bg"></div>
 
-<nav>
-  <a href="/" class="logo">Face<span>Attend</span></a>
-  <a href="/" class="back-link">← Back to Home</a>
-</nav>
+<a class="skip-link" href="#legal-main">Skip to main content</a>
+<header class="site-header">
+  <nav aria-label="Primary navigation">
+    <a class="logo" href="/" aria-label="FaceAttend home">Face<span>Attend</span></a>
+    <div class="legal-nav-actions">
+      <a href="/dashboard" class="back-link">Dashboard</a>
+      <div class="theme-control" role="group" aria-label="Theme">
+        <button type="button" data-theme-choice="light" aria-label="Light theme" title="Light theme"><span class="icon icon-sun" aria-hidden="true"></span></button>
+        <button type="button" data-theme-choice="system" aria-label="System theme" title="System theme"><span class="icon icon-device" aria-hidden="true"></span></button>
+        <button type="button" data-theme-choice="dark" aria-label="Dark theme" title="Dark theme"><span class="icon icon-moon" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  </nav>
+</header>
 
-<div class="container">
+<main class="container" id="legal-main">
   <div class="page-label">Legal</div>
   <h1>Terms of Service</h1>
   <p class="last-updated">Last updated: 1 March 2026</p>
@@ -209,14 +223,17 @@ footer {
   <h2>18. Contact</h2>
   <p>For questions about these Terms, contact us at:</p>
   <ul>
-    <li>Email: <!--email_off--><a href="/cdn-cgi/l/email-protection#4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a" class="__cf_email__" data-cfemail="4a2b2e2723240a2c2b292f2b3e3e2f242e642b3a3a">[email&#160;protected]</a><!--/email_off--></li>
+    <li>Email: <a href="mailto:abubaker@faceattend.app">abubaker@faceattend.app</a></li>
     <li>Website: <a href="https://faceattend.app">faceattend.app</a></li>
   </ul>
-</div>
+</main>
 
-<footer>
-  <div>© 2026 FaceAttend · Uganda · <a href="/terms">Terms of Service</a> · <a href="/privacy">Privacy Policy</a></div>
+<footer aria-label="Footer">
+  <div><a class="logo" href="/">Face<span>Attend</span></a><p>Attendance workflows for universities.</p></div>
+  <nav aria-label="Footer links"><a href="/">Product</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:abubaker@faceattend.app">Contact</a></nav>
+  <div><p>© 2026 FaceAttend · Uganda</p></div>
 </footer>
 <script src="/static/js/cf-email.js" defer></script>
+<script>if(typeof FaceAttendTheme !== 'undefined') FaceAttendTheme.initSwitcher();</script>
 </body>
 </html>

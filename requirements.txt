@@ -8,8 +8,8 @@ google-auth
 
 # Shared
 python-dotenv==1.0.0
-numpy==1.26.2
-Pillow==10.1.0
+numpy
+Pillow
 requests==2.31.0
 slowapi==0.1.9
 apscheduler==3.10.4

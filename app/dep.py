@@ -44,6 +44,7 @@ def rate_limit_key(request: Request) -> str:
     return getattr(request.state, "org_id", None) or get_remote_address(request)
 
 limiter = Limiter(key_func=rate_limit_key)
+BEARER_PREFIX = "Bearer "
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def _bool_flag(value) -> bool:
@@ -66,8 +67,10 @@ def build_admin_context(profile: dict | None) -> dict:
     is_super = is_super_admin or role == "super_admin"
     if is_super:
         role = "super_admin"
-    is_central_admin = role == "central_admin"
-    is_dept_admin = role in {"dept_admin", "admin"}
+
+    # Institution-scoped admins are still admin/central_admin; only dept_admin carries department scope.
+    is_central_admin = role in {"central_admin", "admin"}
+    is_dept_admin = role == "dept_admin"
 
     return {
         "role": role,
@@ -84,10 +87,11 @@ def can_access_feature(profile: dict | None, feature: str, institution_plan: str
     ctx = build_admin_context(profile)
     feature_name = (feature or "").lower()
 
-    if feature_name in {"analytics", "security", "institutions", "api_keys"}:
-        if feature_name == "api_keys":
-            return ctx["is_super"] or (ctx["is_dept_admin"] and normalize_role(institution_plan) == "enterprise")
+    if feature_name in {"analytics", "security", "institutions"}:
         return ctx["is_super"]
+
+    if feature_name == "api_keys":
+        return ctx["is_super"] or (ctx["is_dept_admin"] and normalize_role(institution_plan) == "enterprise")
 
     if feature_name in {"departments", "dept_admins", "deptadmins"}:
         return ctx["is_super"] or ctx["is_central_admin"]
@@ -96,9 +100,7 @@ def can_access_feature(profile: dict | None, feature: str, institution_plan: str
         return ctx["is_super"] or ctx["is_central_admin"] or ctx["is_dept_admin"]
 
     if feature_name in {"students", "lecturers", "course_units", "sessions", "team"}:
-        if ctx["is_super"]:
-            return False
-        return ctx["is_dept_admin"] or ctx["is_central_admin"]
+        return not ctx["is_super"] and (ctx["is_dept_admin"] or ctx["is_central_admin"])
 
     if feature_name == "audit":
         return ctx["is_super"] or ctx["is_dept_admin"] or ctx["is_central_admin"]
@@ -110,11 +112,46 @@ def can_access_feature(profile: dict | None, feature: str, institution_plan: str
 
 # ── Auth dependencies ────────────────────────────────────────────────────────
 
-async def verify_supabase_token(authorization: str = Header(None)):
-    """Verify that the request comes from a valid authenticated Supabase user."""
-    if not authorization or not authorization.startswith("Bearer "):
+def _extract_bearer_token(authorization: str | None) -> str:
+    if not authorization or not authorization.startswith(BEARER_PREFIX):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-    token = authorization.replace("Bearer ", "").strip()
+    return authorization.replace(BEARER_PREFIX, "").strip()
+
+
+def _ensure_active_institution(profile_data: dict | None):
+    if not profile_data:
+        raise HTTPException(status_code=403, detail="Admin profile not found or incomplete")
+
+    profile_context = build_admin_context(profile_data)
+    if not profile_context["can_access_dashboard"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    institution_id = profile_data.get("institution_id")
+    if not institution_id or profile_context["is_super"]:
+        return
+
+    inst_resp = supabase_admin.table("institutions").select("status") \
+        .eq("id", institution_id).limit(1).execute()
+
+    if not inst_resp.data:
+        raise HTTPException(status_code=403, detail="Institution admin requires institution_id in profile")
+
+    status = inst_resp.data[0].get("status", "active")
+    if status == "pending":
+        raise HTTPException(
+            status_code=403,
+            detail="Your institution is pending approval. You will be notified once approved."
+        )
+    if status == "suspended":
+        raise HTTPException(
+            status_code=403,
+            detail="Your institution account has been suspended. Contact support."
+        )
+
+
+def verify_supabase_token(authorization: str = Header(None)):
+    """Verify that the request comes from a valid authenticated Supabase user."""
+    token = _extract_bearer_token(authorization)
     try:
         user_response = supabase.auth.get_user(token)
         if not user_response or not user_response.user:
@@ -126,50 +163,24 @@ async def verify_supabase_token(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail="Token verification failed")
 
 
-async def check_admin(authorization: str = Header(None)):
+def check_admin(authorization: str = Header(None)):
     """Verify that the user is authenticated, is an admin, and their institution is active."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-    token = authorization.replace("Bearer ", "").strip()
+    token = _extract_bearer_token(authorization)
     try:
         user_response = supabase.auth.get_user(token)
         if not user_response or not user_response.user:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
+
         user_id = user_response.user.id
         resp = supabase_admin.table("profiles") \
             .select("is_admin, is_super_admin, role, institution_id") \
             .eq("id", user_id).limit(1).execute()
 
-        profile_data = resp.data[0] if resp.data else None
-        if not profile_data:
-            raise HTTPException(status_code=403, detail="Admin profile not found or incomplete")
-
-        profile_context = build_admin_context(profile_data)
-        if not profile_context["can_access_dashboard"]:
-            raise HTTPException(status_code=403, detail="Admin access required")
-
-        institution_id = profile_data.get("institution_id")
-        if institution_id and not profile_context["is_super"]:
-            inst_resp = supabase_admin.table("institutions").select("status") \
-                .eq("id", institution_id).limit(1).execute()
-            if inst_resp.data:
-                status = inst_resp.data[0].get("status", "active")
-                if status == "pending":
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Your institution is pending approval. You will be notified once approved."
-                    )
-                elif status == "suspended":
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Your institution account has been suspended. Contact support."
-                    )
-
+        _ensure_active_institution(resp.data[0] if resp.data else None)
         return user_response.user
     except HTTPException:
         raise
-    except Exception as e:
-        print(f"[check_admin] error: {e!r}")
+    except Exception:
         raise HTTPException(status_code=401, detail="Token verification failed")
 
 

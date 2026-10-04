@@ -47,6 +47,32 @@ uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
 
 See `Dockerfile`. `Procfile` provided for alternative platforms (Heroku, Render, etc.).
 
+## 🧑‍💻 Run Locally
+
+Python 3.11 or newer and `make` are recommended. The first command creates an ignored
+`.venv` directory and installs the dependencies:
+
+```bash
+make setup
+make smoke
+make run
+```
+
+Open <http://localhost:8080> after the server starts. The public pages and health
+endpoint work without credentials. To use authentication, storage, admin routes,
+payments, email, or AI features, copy `.env.example` to `.env` and fill in the
+corresponding Supabase and provider settings before running `make run`.
+
+Docker is also supported:
+
+```bash
+make docker-build
+make docker-run
+```
+
+To pass configured environment variables to Docker, run the image with
+`--env-file .env` and publish the same port.
+
 ## 🏗️ System Architecture
 
 ```

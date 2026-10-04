@@ -4,21 +4,42 @@
   --nav-bg: color-mix(in srgb, var(--bg-page) 92%, transparent);
   --input-bg: var(--bg-card); --table-head-bg: var(--bg-elevated); --row-hover-bg: var(--table-row-hover);
   --black: var(--bg-page); --white: var(--text); --muted: var(--text-muted);
+  --focus-ring: var(--focus-ring, var(--accent));
+  --focus-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 28%, transparent);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
-.skip-link {
-  position: fixed; top: 8px; left: 8px; z-index: 1000; padding: 10px 14px;
-  background: var(--cyan); color: var(--black); border-radius: 6px; font-weight: 700;
-  transform: translateY(-160%);
-}
-.skip-link:focus { transform: translateY(0); }
-.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 body {
   background: var(--black);
   color: var(--white);
   font-family: 'Instrument Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   min-height: 100vh;
+}
+a, button, input, select, textarea { font: inherit; }
+img, svg { max-width: 100%; display: block; }
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+  box-shadow: var(--focus-shadow);
+}
+.skip-link {
+  position: fixed; top: 8px; left: 8px; z-index: 1000; padding: 10px 14px;
+  background: var(--focus-ring); color: var(--on-accent, var(--black)); border-radius: 6px; font-weight: 700;
+  transform: translateY(-160%);
+  text-decoration: none;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--focus-ring) 25%, transparent);
+}
+.skip-link:focus,
+.skip-link:focus-visible { transform: translateY(0); }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 .dashboard-header { display:flex; justify-content:space-between; gap:24px; align-items:flex-end; margin-bottom:28px; }
 .dashboard-header h1 { font-family:'Syne',sans-serif; font-size:clamp(1.5rem,3vw,2.1rem); margin:4px 0 8px; }
@@ -1345,6 +1366,7 @@ body[data-page="dashboard"] .dashboard-sidebar .tab-btn.active {
   color: var(--accent); border-left-color: var(--accent); background: var(--accent-bg);
 }
 body[data-page="dashboard"] .dashboard-sidebar .icon { color: currentColor; }
+body[data-page="dashboard"] .mobile-section-nav { display: none; }
 body[data-page="dashboard"] .dashboard-header h1 { color: var(--text); }
 body[data-page="dashboard"] .metrics-grid { gap: 14px; }
 body[data-page="dashboard"] .metric-card,
@@ -1400,9 +1422,10 @@ body[data-page="dashboard"] .attention-list li.is-warning { color: var(--warning
 @media (max-width: 800px) {
   body[data-page="dashboard"] .main { padding: 24px 16px 40px; }
   body[data-page="dashboard"] .dashboard-shell { grid-template-columns: 1fr; }
-  body[data-page="dashboard"] .dashboard-sidebar { position: static; max-height: none; margin: 0; overflow-x: auto; flex-direction: row; }
-  body[data-page="dashboard"] .dashboard-sidebar .tab-btn { min-width: max-content; border-left: 0; border-bottom: 3px solid transparent; }
-  body[data-page="dashboard"] .dashboard-sidebar .tab-btn.active { border-bottom-color: var(--accent); }
+  body[data-page="dashboard"] .dashboard-sidebar { display: none; }
+  body[data-page="dashboard"] .mobile-section-nav { display: grid; gap: 6px; }
+  body[data-page="dashboard"] .mobile-section-nav label { color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  body[data-page="dashboard"] .mobile-section-nav select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-card); color: var(--text); font: inherit; }
   body[data-page="dashboard"] .attention-panel { display: block; }
   body[data-page="dashboard"] .attention-list { grid-template-columns: 1fr; margin-top: 12px; }
 }

@@ -1,6 +1,9 @@
 function faceattendApiBase() {
   if (typeof location === 'undefined') return 'https://faceattend.app';
   const host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+    return `${location.protocol}//${location.host}`;
+  }
   if (host === 'faceattend.app' || host.endsWith('.faceattend.app')) {
     return `${location.protocol}//${location.host}`;
   }
@@ -14,6 +17,30 @@ function initSignupForm() {
   const form = document.getElementById('signup-form');
   if (!form) return;
 
+  const clearFieldErrors = () => {
+    form.querySelectorAll('[aria-invalid="true"]').forEach((field) => field.removeAttribute('aria-invalid'));
+    const consentWrap = document.querySelector('.privacy-consent');
+    if (consentWrap) consentWrap.classList.remove('invalid');
+  };
+
+  form.querySelectorAll('input').forEach((field) => {
+    field.addEventListener('input', () => {
+      if (field.getAttribute('aria-invalid') === 'true') {
+        field.removeAttribute('aria-invalid');
+      }
+      const consentWrap = document.querySelector('.privacy-consent');
+      if (consentWrap && field.type !== 'checkbox') {
+        const areAnyInvalid = form.querySelectorAll('[aria-invalid="true"]').length > 0;
+        if (!areAnyInvalid && consentWrap.classList.contains('invalid')) {
+          consentWrap.classList.remove('invalid');
+        }
+      }
+    });
+    field.addEventListener('change', () => {
+      clearFieldErrors();
+    });
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn    = document.getElementById('submit-btn');
@@ -23,16 +50,37 @@ function initSignupForm() {
     const adminFullName  = document.getElementById('admin_full_name').value.trim();
     const adminEmail     = document.getElementById('admin_email').value.trim();
     const phone          = document.getElementById('phone').value.trim();
+    const privacyConsent = document.getElementById('privacy-consent');
 
     btn.disabled         = true;
     btn.textContent      = 'Creating account…';
     status.style.display = 'none';
     status.className     = 'status-msg';
-    if (!universityName || !adminFullName || !adminEmail || !phone) {
-      const firstInvalid = [...form.querySelectorAll('input[required]')].find(field => !field.value.trim());
-      if (firstInvalid) { firstInvalid.setAttribute('aria-invalid', 'true'); firstInvalid.focus(); }
+    const consentBox = document.querySelector('.privacy-consent');
+    if (consentBox) consentBox.classList.remove('invalid');
+
+    const requiredFields = [...form.querySelectorAll('input[required]')];
+    const missingField = requiredFields.find(field => {
+      if (field.type === 'checkbox') return !field.checked;
+      return !field.value.trim();
+    });
+
+    if (!universityName || !adminFullName || !adminEmail || !phone || !privacyConsent.checked) {
+      clearFieldErrors();
+      if (missingField) {
+        missingField.setAttribute('aria-invalid', 'true');
+        if (missingField.type === 'checkbox') {
+          const consentWrap = missingField.closest('.privacy-consent');
+          if (consentWrap) consentWrap.classList.add('invalid');
+          missingField.focus();
+        } else {
+          missingField.focus();
+        }
+      }
       status.className = 'status-msg error';
-      status.textContent = 'Complete all required fields before submitting.';
+      status.textContent = !privacyConsent.checked
+        ? 'Please confirm the privacy and consent notice before creating your institution account.'
+        : 'Complete all required fields before submitting.';
       status.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Create Institution Account';
@@ -92,27 +140,69 @@ function initMobileNav() {
   const links  = document.querySelector('.nav-links');
   if (!toggle || !links) return;
 
-  toggle.addEventListener('click', () => {
-    links.classList.toggle('open');
-    const isOpen = links.classList.contains('open');
-    toggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+  const setOpenState = (isOpen) => {
+    links.classList.toggle('open', isOpen);
     toggle.setAttribute('aria-expanded', String(isOpen));
+    toggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+  };
+
+  const closeMenu = (returnFocus = false) => {
+    setOpenState(false);
+    if (returnFocus) toggle.focus();
+  };
+
+  const getFocusable = () => {
+    return [...links.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')]
+      .filter((el) => !el.hasAttribute('hidden'));
+  };
+
+  toggle.addEventListener('click', () => {
+    const isOpen = links.classList.contains('open');
+    setOpenState(!isOpen);
   });
 
-  links.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      links.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Open menu');
+  links.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      closeMenu(false);
     });
   });
 
+  document.addEventListener('click', (event) => {
+    const clickedInsideToggle = toggle.contains(event.target);
+    const clickedInsideLinks = links.contains(event.target);
+    if (!clickedInsideToggle && !clickedInsideLinks && links.classList.contains('open')) {
+      closeMenu(false);
+    }
+  });
+
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && links.classList.contains('open')) {
-      links.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Open menu');
-      toggle.focus();
+    if (!links.classList.contains('open')) return;
+
+    if (event.key === 'Escape') {
+      closeMenu(true);
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const focusable = getFocusable();
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   });
 }

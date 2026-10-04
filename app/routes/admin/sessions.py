@@ -18,6 +18,7 @@ router = APIRouter(tags=["admin-sessions"])
 @router.get("/admin/sessions")
 async def get_sessions(
     institution_id: str = None,
+    department_id: str = None,
     limit: int = 100,
     user=Depends(check_admin),
 ):
@@ -54,8 +55,11 @@ async def get_sessions(
                 query = query.eq("institution_id", institution_id)
         elif role == "dept_admin":
             query = query.eq("institution_id", user_institution_id)
-            if user_department_id:
-                query = query.eq("department_id", user_department_id)
+            effective_department_id = department_id or user_department_id
+            if department_id and department_id != user_department_id:
+                raise HTTPException(status_code=403, detail="Department mismatch: you can only view your own department sessions.")
+            if effective_department_id:
+                query = query.eq("department_id", effective_department_id)
             else:
                 logger.warning(
                     "dept_admin profile %s is missing department_id; falling back to institution scope",

@@ -14,6 +14,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_qRH90RKcsglvtumJPWDxng_ju9Lploh";
 function faceattendApiBase() {
   if (typeof location === "undefined") return "https://faceattend.app";
   const host = location.hostname;
+  if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") {
+    return `${location.protocol}//${location.host}`;
+  }
   if (host === "faceattend.app" || host.endsWith(".faceattend.app")) {
     return `${location.protocol}//${location.host}`;
   }
@@ -125,6 +128,17 @@ function renderDashboardShell() {
     const button = document.getElementById(`tab-btn-${item.id}`);
     if (button) tabs.appendChild(button);
   });
+  const mobileSelect = document.getElementById('mobile-section-select');
+  if (mobileSelect) {
+    mobileSelect.innerHTML = config.navItems
+      .map((item) => `<option value="${item.id}">${item.label}</option>`)
+      .join('');
+    mobileSelect.value = config.navItems[0]?.id || '';
+    if (mobileSelect.dataset.bound !== 'true') {
+      mobileSelect.dataset.bound = 'true';
+      mobileSelect.addEventListener('change', () => switchTab(mobileSelect.value));
+    }
+  }
   tabs.dataset.scope = config.scope;
   const scopeSummary = document.getElementById('scope-summary');
   if (scopeSummary) scopeSummary.textContent = `Scope: ${config.scope}`;
@@ -231,9 +245,9 @@ function normalizeRole(role) {
 function buildDashboardPermissions(profile = {}, institutionPlan = 'free') {
   const role = Boolean(profile?.is_super_admin) ? 'super_admin' : normalizeRole(profile?.role);
   const isSuper = Boolean(profile?.is_super_admin) || role === 'super_admin';
-  const isCentral = role === 'central_admin';
-  // Super admins can also have is_admin=true; keep role branches mutually exclusive.
-  const isDept = !isSuper && !isCentral && (role === 'dept_admin' || role === 'admin' || Boolean(profile?.is_admin));
+  const isCentral = role === 'central_admin' || role === 'admin';
+  // Only dept_admin carries department-scoped access. Institution-scoped admins stay at institution scope.
+  const isDept = !isSuper && !isCentral && (role === 'dept_admin' || (!role && Boolean(profile?.is_admin)));
   const plan = String(institutionPlan || 'free').toLowerCase();
 
   return {
@@ -504,6 +518,8 @@ function switchTab(tab) {
 
   const btn = document.getElementById(`tab-btn-${tab}`);
   if (btn) btn.classList.add('active');
+  const mobileSelect = document.getElementById('mobile-section-select');
+  if (mobileSelect) mobileSelect.value = tab;
   const panel = document.getElementById(`tab-${tab}`);
   if (panel) panel.classList.add('active');
   const summary = document.getElementById('dashboard-summary');
@@ -1112,6 +1128,7 @@ async function generateAISummary() {
     if (dateFrom)        params.set('date_from', dateFrom);
     if (dateTo)          params.set('date_to', dateTo);
     if (effectiveInstId) params.set('institution_id', effectiveInstId);
+    if (isDeptAdmin && currentDepartmentId) params.set('department_id', currentDepartmentId);
 
     const resp = await fetch(`${API_URL}/admin/ai-attendance-summary?${params}`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
@@ -1320,12 +1337,17 @@ async function loadData() {
     '<div class="loading"><div class="spinner"></div>Loading records...</div>';
 
   try {
-    const instParam = currentInstitutionId ? `&institution_id=${currentInstitutionId}` : '';
-    const instQuery = currentInstitutionId ? `?institution_id=${currentInstitutionId}` : '';
+    const attendanceParams = new URLSearchParams({ limit: '1000' });
+    if (currentInstitutionId) attendanceParams.set('institution_id', currentInstitutionId);
+    if (isDeptAdmin && currentDepartmentId) attendanceParams.set('department_id', currentDepartmentId);
+
+    const studentsParams = new URLSearchParams();
+    if (currentInstitutionId) studentsParams.set('institution_id', currentInstitutionId);
+    if (isDeptAdmin && currentDepartmentId) studentsParams.set('department_id', currentDepartmentId);
 
     const [recResp, studResp] = await Promise.all([
-      fetch(`${API_URL}/admin/attendance-records?limit=1000${instParam}`, { headers }),
-      fetch(`${DAZZLING_URL}/students${instQuery}`, { headers }),
+      fetch(`${API_URL}/admin/attendance-records?${attendanceParams.toString()}`, { headers }),
+      fetch(`${DAZZLING_URL}/students${studentsParams.toString() ? `?${studentsParams.toString()}` : ''}`, { headers }),
     ]);
 
     const records  = recResp.ok  ? await recResp.json()  : [];
@@ -1479,7 +1501,11 @@ async function loadSecurityData() {
       return;
     }
 
-    const resp = await fetch(`${API_URL}/admin/attendance-records?limit=5000`, {
+    const params = new URLSearchParams({ limit: '5000' });
+    if (currentInstitutionId) params.set('institution_id', currentInstitutionId);
+    if (isDeptAdmin && currentDepartmentId) params.set('department_id', currentDepartmentId);
+
+    const resp = await fetch(`${API_URL}/admin/attendance-records?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
     if (!resp.ok) throw new Error('Failed to fetch records');

@@ -62,6 +62,16 @@ def dashboard_page():
     return FileResponse(_STATIC / "html" / "dashboard.html")
 
 
+@router.get("/login")
+def login_page():
+    return FileResponse(_STATIC / "html" / "dashboard.html")
+
+
+@router.get("/forgot-password")
+def forgot_password_page():
+    return FileResponse(_STATIC / "html" / "forgot-password.html")
+
+
 @router.get("/privacy")
 def privacy_page():
     return FileResponse(_STATIC / "html" / "privacy.html")

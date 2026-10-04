@@ -119,18 +119,13 @@
   <section class="content-section pricing-section" id="pricing" aria-labelledby="pricing-title">
     <p class="section-label">Pricing</p>
     <h2 class="section-title" id="pricing-title">Start with the plan that fits your institution.</h2>
-    <div class="currency-control" role="group" aria-label="Display currency">
-      <button type="button" class="currency-btn active" data-currency="USD">USD</button>
-      <button type="button" class="currency-btn" data-currency="UGX">UGX</button>
-      <button type="button" class="currency-btn" data-currency="RWF">RWF</button>
-    </div>
     <div class="pricing-grid">
       <article class="pricing-card"><h3>Starter</h3><strong class="price" data-usd="49">$49<span>/mo</span></strong><p>Up to 500 students</p><ul><li>500 student profiles</li><li>Unlimited course units</li><li>Android enrollment app</li><li>Real-time dashboard and CSV export</li></ul><a href="#signup" class="btn-pricing outline">Start free trial</a></article>
       <article class="pricing-card featured"><span class="pricing-badge">Most popular</span><h3>Growth</h3><strong class="price" data-usd="99">$99<span>/mo</span></strong><p>Up to 2,000 students</p><ul><li>2,000 student profiles</li><li>Anti-spoofing liveness detection</li><li>AI attendance summaries</li><li>Audit logs and security analytics</li></ul><a href="#signup" class="btn-pricing filled">Start free trial</a></article>
       <article class="pricing-card"><h3>Pro</h3><strong class="price" data-usd="199">$199<span>/mo</span></strong><p>Up to 5,000 students</p><ul><li>5,000 student profiles</li><li>Coordinator accounts</li><li>Real-time dashboard and CSV export</li><li>Priority support</li></ul><a href="#signup" class="btn-pricing outline">Start free trial</a></article>
       <article class="pricing-card"><h3>Enterprise</h3><strong class="price">Custom</strong><p>5,000+ students · Multi-campus</p><ul><li>Unlimited students</li><li>Multi-campus support</li><li>Enterprise API access</li><li>Custom SLA and contract</li></ul><a href="#signup" class="btn-pricing outline">Talk to us</a></article>
     </div>
-    <p class="pricing-note">Mobile money and card payments are supported. UGX and RWF display values are TODO: confirm exchange rates before publishing.</p>
+    <p class="pricing-note">Prices are shown in USD. Contact us for renewal terms, payment availability, or an institution plan.</p>
   </section>
 
   <section class="content-section faq-section" id="faq" aria-labelledby="faq-title">
@@ -138,10 +133,10 @@
     <div class="faq-list">
       <details><summary>How are students enrolled?</summary><p>Students are enrolled through the Android app, which captures four photos for the student profile.</p></details>
       <details><summary>What happens if verification fails?</summary><p>The verification result remains available for review in the attendance record. The team can follow its existing review workflow.</p></details>
-      <details><summary>How are student consent and data handled?</summary><p>Review the <a href="/privacy">privacy notice</a> before registering. TODO: owner to confirm the consent wording for this page.</p></details>
-      <details><summary>How long is data kept?</summary><p>TODO: owner to confirm the retention period from the current policy.</p></details>
+      <details><summary>How are student consent and data handled?</summary><p>Institutions must obtain informed consent before enrolling biometric data. Review the <a href="/privacy">privacy notice</a> before registering.</p></details>
+      <details><summary>How long is data kept?</summary><p>Face images and embeddings are deleted within 30 days of account termination. Attendance records may be retained for up to three years. See the <a href="/privacy">privacy policy</a> for details.</p></details>
       <details><summary>Which devices are supported?</summary><p>The enrollment and attendance workflow currently uses the Android app and a browser dashboard.</p></details>
-      <details><summary>How do I delete data?</summary><p>TODO: owner to confirm the deletion request process from the current policy.</p></details>
+      <details><summary>How do I delete data?</summary><p>Request deletion through your institution administrator or contact <a href="mailto:abubaker@faceattend.app">abubaker@faceattend.app</a>.</p></details>
     </div>
   </section>
 
@@ -154,6 +149,10 @@
         <div class="form-group"><label for="admin_full_name">Central Administrator full name</label><input type="text" id="admin_full_name" name="admin_full_name" placeholder="e.g. Dr. John Mukasa" required/></div>
         <div class="form-row"><div class="form-group"><label for="admin_email">Admin email</label><input type="email" id="admin_email" name="admin_email" placeholder="admin@university.ac.ug" autocomplete="email" required/></div><div class="form-group"><label for="phone">Phone number</label><input type="tel" id="phone" name="phone" placeholder="+256 700 000 000" autocomplete="tel" required/></div></div>
         <div class="trial-note">30-day free trial · Full access · No credit card needed · You register as Central Administrator</div>
+        <label class="privacy-consent" for="privacy-consent">
+          <input type="checkbox" id="privacy-consent" name="privacy_consent" required/>
+          <span>I understand FaceAttend uses biometric verification and that my institution is responsible for obtaining consent before enrollment. I agree to the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Service</a>.</span>
+        </label>
         <button type="submit" class="btn-submit" id="submit-btn">Create institution account</button>
         <div class="status-msg" id="status-msg" role="status" aria-live="polite" tabindex="-1"></div>
       </form>
@@ -163,29 +162,12 @@
 
 <footer aria-label="Footer">
   <div><a class="logo" href="/">Face<span>Attend</span></a><p>Attendance workflows for universities.</p></div>
-  <nav aria-label="Footer links"><a href="#features">Product</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:hello@faceattend.app">Contact</a></nav>
-  <div><div class="theme-control" role="group" aria-label="Theme"><button type="button" data-theme-choice="light" aria-label="Light theme" title="Light theme"><span class="icon icon-sun" aria-hidden="true"></span></button><button type="button" data-theme-choice="system" aria-label="System theme" title="System theme"><span class="icon icon-device" aria-hidden="true"></span></button><button type="button" data-theme-choice="dark" aria-label="Dark theme" title="Dark theme"><span class="icon icon-moon" aria-hidden="true"></span></button></div><p>© 2026 FaceAttend · Uganda</p></div>
+  <nav aria-label="Footer links"><a href="#features">Product</a><a href="mailto:abubaker@faceattend.app">Contact</a></nav>
+  <div><p>© 2026 FaceAttend · Uganda</p><div class="footer-badge"><a href="https://websitelaunches.com/site/faceattend.app" target="_blank" rel="noopener"><img id="launch-badge" src="https://websitelaunches.com/badge/faceattend.app.svg?theme=dark" alt="Established online - Public launch record" width="180" height="39"/></a></div></div>
+  <div class="footer-legal" aria-label="Legal links"><a href="/privacy">Privacy Policy</a><span aria-hidden="true">·</span><a href="/terms">Terms of Service</a></div>
 </footer>
 
 <script src="/static/js/cf-email.js" defer></script>
 <script src="/static/js/main.js"></script>
-<script>
-  const FACEATTEND_CURRENCY_VALUES = {
-    USD: { symbol: '$', values: { starter: 49, growth: 99, pro: 199 } },
-    UGX: { symbol: 'UGX ', values: { starter: null, growth: null, pro: null } }, // TODO: owner to confirm exchange rates
-    RWF: { symbol: 'RWF ', values: { starter: null, growth: null, pro: null } }, // TODO: owner to confirm exchange rates
-  };
-  document.querySelectorAll('.currency-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      const currency = FACEATTEND_CURRENCY_VALUES[button.dataset.currency];
-      document.querySelectorAll('.currency-btn').forEach((item) => item.classList.toggle('active', item === button));
-      document.querySelectorAll('.price[data-usd]').forEach((price) => {
-        const key = price.closest('.pricing-card').querySelector('h3').textContent.toLowerCase();
-        const value = currency.values[key];
-        price.innerHTML = value == null ? 'TODO<span>/mo</span>' : `${currency.symbol}${value}<span>/mo</span>`;
-      });
-    });
-  });
-</script>
 </body>
 </html>

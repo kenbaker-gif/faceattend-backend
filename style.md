@@ -562,3 +562,233 @@ AI:       AI-generated summary · Today · Based on 1,356 records
           Attendance was 92%, up 3 percentage points from yesterday.
           [View supporting records] [Regenerate]
 ```
+
+## 13. Whole-product review — 1 October 2026
+
+### 13.1 Product surfaces reviewed
+
+This review covers the connected product, not only the marketing site:
+
+- Web landing page and registration flow in the backend repository.
+- Web admin dashboard, including Students, Attendance, Sessions, Team, Billing,
+    Audit Logs, and AI Summary.
+- Flutter mobile app in `/home/abubaker/Smart_attendance_app`, including login,
+    signup, session gating, biometric unlock, auto-lock, camera verification, and
+    the mobile admin screen.
+- The hosted Supabase authentication/data layer and the separate verification
+    API used by the mobile client.
+
+### 13.2 Overall assessment
+
+The visual direction is credible for a Ugandan university pilot: the teal action
+color, light/dark themes, restrained surfaces, and operational vocabulary make
+FaceAttend feel more like a working institution product than a consumer app.
+The landing page is approximately **8/10 visually** and the desktop dashboard
+approximately **8/10**. The authenticated dashboard at a 390px viewport is
+approximately **6/10** because nine sections compete for limited horizontal
+space and the student table becomes dense.
+
+The main risk is not visual quality. It is product coherence and trust across
+surfaces: the landing page, dashboard, and Flutter app should describe the same
+roles, institution context, data boundaries, and failure states.
+
+### 13.3 Flutter mobile direction
+
+The Flutter client has a strong operational foundation:
+
+- Supabase email/password authentication and session persistence.
+- Biometric unlock after an initial password login.
+- A two-minute inactivity/background auto-lock.
+- Camera capture, image compression, upload, and verification feedback.
+- Session-aware verification with lecturer, course unit, and attendance context.
+
+Prioritize the following mobile improvements:
+
+1. Make the first screen task-led: **Start session**, **Scan student**, and
+     **Review recent results** should be more prominent than account metadata.
+2. Show institution, campus, course unit, lecturer, and active session context in
+     one persistent header so a scan cannot silently go to the wrong session.
+3. Design for intermittent connectivity: show queued uploads, retry state, last
+     successful sync, and whether a result is local, pending, or server-confirmed.
+4. Make camera guidance explicit: lighting, face position, movement, and what to
+     do when verification fails. Never leave the user with only a spinner.
+5. Keep biometric and logout states distinct. Explain that auto-lock preserves a
+     session while hard logout destroys it.
+6. Use the same semantic status language and colors as the dashboard: Verified,
+     Review, Failed, Spoof detected, Pending, and Offline.
+7. Test the primary scan flow on low-memory Android devices and smaller screens;
+     camera startup time and recovery after app backgrounding are core UX metrics.
+
+### 13.4 Dashboard priorities
+
+The current desktop shell is strong, but the dashboard should evolve toward a
+role-specific operational workspace:
+
+- Central administrators need institution health, attendance trend, enrollment,
+    billing, audit, and exceptions.
+- Department administrators need department attendance, units, lecturers,
+    students, and exceptions.
+- Lecturers/coordinators need the active session, scan readiness, recent results,
+    and a short route to review.
+
+For mobile web, replace the nine-tab strip with two or three primary destinations
+and a labelled **More** menu. Keep the current section available, but do not make
+every administrative area compete in the first viewport.
+
+The Students table should gain search, institution/course filters, pagination or
+virtualized rows, clear loading/error/empty states, and a visible export action.
+Destructive Delete actions should be visually separated from routine row actions
+and should identify the scope of the deletion before confirmation.
+
+### 13.5 Landing page priorities
+
+The landing page has a strong workflow narrative: enrollment, scan, and review.
+Make it more locally credible before treating it as production-ready:
+
+- Remove visible `TODO` text from pricing, FAQ, and currency switching.
+- Make UGX the default or provide confirmed UGX values and renewal terms.
+- Explain mobile money/card support only when the payment workflow is available.
+- Add concise Uganda-specific support, data protection, and connectivity language.
+- Make biometric consent and dispute/review handling visible before registration.
+- Use the real mobile scan workflow in product imagery instead of generic mockups
+    where possible, with all names and records redacted.
+- Keep one theme control in the header; avoid duplicate footer controls.
+- Keep Privacy Policy and Terms in one dedicated legal row in the footer.
+- Treat the WebSiteLaunches badge as a credibility link, not a product feature;
+    keep its external destination and alt text explicit.
+
+### 13.6 Shared content and trust rules
+
+The web and mobile products must use the same vocabulary and boundaries:
+
+| Concept | Preferred language |
+|---|---|
+| Successful scan | **Verified** |
+| Uncertain result | **Review required** |
+| Failed match | **Not verified** |
+| Liveness failure | **Spoof check failed** |
+| Network interruption | **Waiting to sync** |
+| AI output | **AI-generated summary** |
+
+Never imply that a face result is infallible. Always provide a human review path,
+the supporting attendance record, timestamp, session, and institution scope.
+Never show production student names, emails, face images, API keys, or realistic
+records in marketing screenshots or tests.
+
+### 13.7 Prioritized improvement plan
+
+**P0 — before public institutional rollout**
+
+- Remove pricing/FAQ placeholders and confirm UGX, renewal, and payment wording.
+- Add clear mobile/web loading, offline, retry, stale-data, and empty states.
+- Verify every protected action uses the intended local or hosted API endpoint;
+    do not let local testing silently mutate production data.
+- Test role boundaries, institution isolation, biometric consent, and deletion
+    confirmation end to end.
+
+**P1 — next product iteration**
+
+- Introduce role-specific dashboard starting views.
+- Test the role-aware mobile section selector with each authenticated role.
+- Add student search/filter/export and attendance exception workflows.
+- Align mobile and web status components, wording, colors, and timestamps.
+
+**P2 — polish and adoption**
+
+- Add institution branding and campus context.
+- Add a real redacted mobile scan preview to the landing page.
+- Measure scan startup, upload retry, dashboard first meaningful state, and
+    common task completion on representative Android devices and networks.
+
+## 14. Implementation audit — 1 October 2026
+
+This section records what is present in the current source and what still needs
+work. It is an audit of implementation, not a replacement for the target
+standards above. **Implemented** means visible in source or verified locally;
+**partial** means the basic capability exists but does not meet the full
+standard; **not implemented** means no supporting behavior was found; **not
+verified** means runtime, device, or user testing is still required.
+
+### 14.1 Web foundation and visual system
+
+| Area | Status | Evidence and gap |
+|---|---|---|
+| Shared light/dark/system theme | **Implemented** | `static/css/theme.css` and `static/js/theme.js` provide shared tokens, preference persistence, and theme controls. |
+| Responsive landing layout | **Implemented** | `static/html/index.html` and `static/css/styles.css` provide desktop/mobile layouts; local browser checks show no page-level horizontal overflow. |
+| Responsive dashboard shell | **Implemented with follow-up** | Desktop keeps the sidebar while mobile uses a labelled section selector populated from the role-aware navigation configuration. Authenticated role-specific option population still needs end-to-end testing. |
+| Semantic landmarks and skip links | **Implemented** | Landing, dashboard, privacy, and terms pages expose header/nav/main/footer landmarks and skip links. Full keyboard traversal remains **not verified**. |
+| Focus and control accessibility | **Partial** | Focus-visible styling, named icon controls, labelled fields, tabs, and live regions exist. WCAG 2.2 AA, forced-colors, 200% zoom, and screen-reader behavior are not yet fully tested. |
+| Reduced-motion behavior | **Not verified** | The guide requires `prefers-reduced-motion` handling; a dedicated end-to-end check and explicit rule coverage are still needed. |
+| Visual consistency across Flutter and web | **Partial** | The web has a documented Trusted Signal system. The Flutter app has its own screen styling; shared tokens and status components have not been formalized. |
+
+### 14.2 Landing page
+
+| Area | Status | Evidence and gap |
+|---|---|---|
+| Hero, workflow story, features, pricing, FAQ, registration | **Implemented** | Present in `static/html/index.html`. The enroll → verify → review story is clear. |
+| Theme control | **Implemented** | One header theme controller remains; duplicate footer theme control was removed. |
+| Privacy and Terms access | **Implemented** | The trust/FAQ content and dedicated footer legal row link to `/privacy` and `/terms`. |
+| Public launch badge | **Implemented** | `launch-badge` links to WebSiteLaunches and updates its image theme through `theme.js`. |
+| Local contact identity | **Partial** | Current local landing/legal contact uses `abubaker@faceattend.app`; other dashboard/billing strings still contain `admin@faceattend.app` and need an ownership decision before global replacement. |
+| Pricing localization | **Implemented for current scope** | The landing page now presents one clear USD price set with no unconfirmed UGX/RWF selector. Confirm renewal terms, payment availability, and any future local-currency offering before publishing. |
+| Production-ready FAQ/legal copy | **Implemented with follow-up** | The landing FAQ now uses the privacy policy for consent, retention, and deletion guidance. Legal/product owners should still approve the wording before publishing. |
+| Real product evidence | **Partial** | The page uses illustrative mockups. Add a redacted mobile scan/dashboard preview after confirming that no personal or production data is exposed. |
+| Registration accessibility and recovery | **Not verified** | Labels and status region exist; field-level errors, focus movement, keyboard flow, and slow-network recovery need runtime testing. |
+
+### 14.3 Web dashboard
+
+| Area | Status | Evidence and gap |
+|---|---|---|
+| Authentication and recovery | **Implemented** | Supabase login, password recovery, session checks, logout, and role-based shell rendering are present. |
+| Role-specific navigation | **Implemented** | `ROLE_CONFIG` in `static/js/dashboard.js` defines super admin, central admin, department admin, coordinator, and lecturer navigation. Permission/API parity still needs full matrix testing. |
+| Institution/department scope | **Partial** | Scope is displayed and backend role helpers enforce boundaries. The first viewport should show richer institution, department, campus, date, and freshness context. |
+| Attendance/students/lecturers/course/session/team/billing/audit workflows | **Implemented** | Routes, tabs, loaders, tables, dialogs, and mutations are present. End-to-end behavior against each role is not fully verified. |
+| Loading, empty, and error states | **Partial** | Many loaders and empty/error messages exist. Stale-data indicators, consistent retry actions, filter preservation, and panel-by-panel coverage are incomplete. |
+| Search, filters, chips, pagination, and export | **Partial** | Filters and exports exist in selected views. Student search, removable filter chips, pagination/virtualization, and a consistently visible export workflow remain gaps. |
+| Destructive-action confirmation | **Partial** | Delete/remove dialogs name the object in several paths. Consequence wording, focus return, and consistency across every destructive action need verification. |
+| AI explainability | **Partial** | AI summary controls and supporting dashboard context exist. Confirm that every generated result shows scope, period, timestamp, source coverage, and a supporting-record route. |
+| Accessibility semantics | **Partial** | Tabs, tables, labels, dialogs, and `aria-live` regions are present. Automated axe/pa11y and manual keyboard/screen-reader testing are still required. |
+| Mobile web navigation | **Implemented with follow-up** | Mobile hides the crowded tab strip and shows a labelled selector; verify the available options for every authenticated role. |
+
+### 14.4 Flutter mobile app
+
+| Area | Status | Evidence and gap |
+|---|---|---|
+| Flutter project available locally | **Implemented** | `/home/abubaker/Smart_attendance_app` contains the Flutter project, Android/iOS/web/desktop targets, and local configuration files. |
+| Supabase authentication/session gate | **Implemented** | `main.dart`, `login_screen.dart`, `session_gate_screen.dart`, and `config.dart` provide authentication and session routing. |
+| Biometric unlock and auto-lock | **Implemented** | The README and `security_wrapper.dart` document biometric unlock and a two-minute inactivity/background lock. Device-level verification is still required. |
+| Camera verification flow | **Implemented** | `verification_screen.dart` initializes cameras, compresses images, uploads verification requests, and tracks session scan counts. |
+| Session/course/lecturer context | **Partial** | Verification accepts session, lecturer, and course-unit identifiers. Confirm that this context is persistently visible and cannot be accidentally changed during scanning. |
+| Verification feedback | **Partial** | Scanning, waking, result, and session flags exist. Confirm clear guidance for lighting, positioning, failure, spoof, timeout, and retry states on real devices. |
+| Offline queue and sync recovery | **Not implemented** | No verified queue, retry ledger, last-sync state, or local/pending/server-confirmed status was found in the reviewed files. |
+| Shared web/mobile status language | **Not implemented** | The target vocabulary is documented in Section 13.6, but a shared implementation or localization source has not been established. |
+| Mobile admin experience | **Partial** | `admin_screen.dart` exists with role and student-management behavior. Its information hierarchy and mobile usability need a device-based review against the web dashboard. |
+| Low-memory and network testing | **Not verified** | Test camera startup, background/foreground recovery, upload latency, and failure recovery on representative Android devices and Ugandan network conditions. |
+
+### 14.5 Environment and deployment boundaries
+
+| Area | Status | Evidence and gap |
+|---|---|---|
+| Local backend run | **Implemented** | The backend runs with `/home/abubaker/venvs/env_3.14` and a user systemd service on port `8080`. |
+| Automatic local backend reload | **Implemented** | The service uses Uvicorn `--reload`; browser refresh is still required for visible frontend changes. |
+| Local backend without `.env` | **Implemented with limitation** | Public pages and health checks start without server Supabase variables; protected server-side operations require credentials. |
+| Local dashboard API isolation | **Implemented** | `faceattendApiBase()` in `static/js/dashboard.js` and `static/js/main.js` use the current localhost/127.0.0.1 origin. Supabase authentication and any explicitly hosted services remain separate. |
+| Mobile API environment separation | **Partial** | The Flutter app loads `.env` and centralizes config, but verify that debug builds point to a safe development/test backend rather than production. |
+| Production secret handling | **Partial** | Server secrets are environment-based on the backend; frontend public Supabase values are embedded by design. Audit every build and mobile artifact to ensure service-role keys never ship. |
+
+### 14.6 Completion state
+
+The product has a credible visual foundation and a working pilot path across web
+and mobile. It is **not yet standard-complete for broad institutional rollout**.
+The highest-confidence gaps are:
+
+1. Confirm Uganda-specific commercial and privacy wording, including renewal and
+    payment availability; add local-currency pricing only when approved.
+2. Verify local and production API behavior with a destructive-action test matrix.
+3. Add mobile offline/queued-sync behavior and verify camera failure guidance.
+4. Test the role-aware mobile dashboard selector with every authenticated role.
+5. Run WCAG, device, slow-network, role-boundary, and end-to-end tests and record
+    the results here.
+
+Until those checks are complete, describe the system as **pilot-ready with
+documented rollout gaps**, not fully production-ready.

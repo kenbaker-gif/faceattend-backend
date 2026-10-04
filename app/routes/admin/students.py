@@ -156,6 +156,7 @@ async def upload_student(
 @router.get("/students")
 async def list_students(
     institution_id: str = None,
+    department_id: str = None,
     user=Depends(check_admin),
 ):
     try:
@@ -182,8 +183,11 @@ async def list_students(
 
         if role == "dept_admin":
             query = query.eq("institution_id", user_institution_id)
-            if user_department_id:
-                query = query.eq("department_id", user_department_id)
+            effective_department_id = department_id or user_department_id
+            if department_id and department_id != user_department_id:
+                raise HTTPException(status_code=403, detail="Department mismatch: you can only view your own department records.")
+            if effective_department_id:
+                query = query.eq("department_id", effective_department_id)
         else:
             query = query.eq("institution_id", user_institution_id)
 
