@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "faceattend-backend-workers",
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-10-03",
+  "assets": {
+    "directory": "./static",
+    "binding": "ASSETS"
+  },
+  "containers": [
+    {
+      "class_name": "FaceAttendContainer",
+      "image": "./Dockerfile",
+      "max_instances": 1,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "FACEATTEND_CONTAINER",
+        "class_name": "FaceAttendContainer"
+      }
+    ]
+  },
+  "exports": {
+    "FaceAttendContainer": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  }
+}
