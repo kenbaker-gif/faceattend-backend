@@ -48,11 +48,8 @@ Thumbs.db
 # Cloudflare / local deploy tooling
 .wrangler/
 node_modules/
-package-lock.json
-package.json
 180
 witch -c cloudflare-workers
-wrangler.jsonc
 
 # Excluded modules
 app/Enterprise

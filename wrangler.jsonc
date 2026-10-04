@@ -3,10 +3,6 @@
   "name": "faceattend-backend-workers",
   "main": "cloudflare/worker.ts",
   "compatibility_date": "2026-10-03",
-  "assets": {
-    "directory": "./static",
-    "binding": "ASSETS"
-  },
   "containers": [
     {
       "class_name": "FaceAttendContainer",
